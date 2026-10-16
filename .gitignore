@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local config & secrets
+.env
+
+# Editors
+.vscode/
+.idea/
+
+# Power BI: binary files and local caches (the PBIP text files are versioned)
+*.pbix
+powerbi/**/.pbi/cache.abf
+powerbi/**/.pbi/localSettings.json
+
+# Pre-refactor code kept locally for reference
+_legacy/

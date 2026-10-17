@@ -1,0 +1,29 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pl-PL
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["DatabaseServer","DatabaseName","kraken_spot_ohlc","kraken_spot_pair","kraken_spot_timeframe"]
+
+annotation PBI_ProTooling = ["DevMode","MCP-PBIModeling"]
+
+ref table kraken_spot_ohlc
+ref table kraken_spot_pair
+ref table kraken_spot_timeframe
+ref table EntrySelection
+ref table ExitSelection
+ref table Leverage
+ref table 'Invested amount'
+ref table Simulator
+ref table 'Intraday Strategy'
+ref table MarketHours
+ref table Calendar
+ref table 'Holding Hours'
+
+ref cultureInfo en-US
+

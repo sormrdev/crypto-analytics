@@ -1,0 +1,11 @@
+/// PostgreSQL host:port of the pipeline database.
+expression DatabaseServer = "localhost:5432" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: f5029c4f-5b06-4b90-8242-5fabcf84a45f
+
+	annotation PBI_ResultType = Text
+
+/// Database created by `alembic upgrade head` (see CRYPTO_DATABASE_URL in .env.example).
+expression DatabaseName = "kraken_spot_analysis" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 7770de86-0c15-4012-aef9-2d4a4a2d9ac8
+
+	annotation PBI_ResultType = Text

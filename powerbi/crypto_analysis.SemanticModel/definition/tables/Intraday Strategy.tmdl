@@ -1,0 +1,156 @@
+table 'Intraday Strategy'
+	lineageTag: 18770bde-432c-4b22-8779-46e4f43b37c3
+
+	/// Position size in base currency at the intraday entry price.
+	measure 'Position Volume 15 min' = DIVIDE([Position Size], [Entry Price 15 min])
+		formatString: #,0.########
+		lineageTag: 171aca5f-9d26-40a9-bb40-f48b7dd79242
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Liquidation price of the intraday position.
+	measure 'Liquidation Price 15 min' =
+			VAR Leverage = [Leverage Value]
+			VAR EntryPrice = [Entry Price 15 min]
+			VAR MMR = [Maintenance Margin Rate]
+			RETURN
+			    IF(
+			        NOT ISBLANK(EntryPrice) && Leverage > 0,
+			        SWITCH(
+			            SELECTEDVALUE(Simulator[TradeDirection]),
+			            "Long", EntryPrice * (1 - 1 / Leverage + MMR),
+			            "Short", EntryPrice * (1 + 1 / Leverage - MMR)
+			        )
+			    )
+		formatString: #,0.####
+		lineageTag: f1fad819-de90-43be-a229-1ccb3cced714
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Average daily result of the intraday strategy (USD).
+	measure 'Simulated Profit 15 min - Per Day' = AVERAGEX(VALUES(kraken_spot_ohlc[Date]), CALCULATE([Simulated Profit 15 min]))
+		formatString: \$#,0.00;-\$#,0.00
+		displayFolder: Strategy stats
+		lineageTag: ab6919fb-3179-4ba1-9667-95687dd3b40d
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Min Selected Date' = MIN(kraken_spot_ohlc[Date])
+		formatString: General Date
+		lineageTag: de0694af-ea0d-41a3-a3ec-5b30adfcb98a
+
+	measure 'Max Selected Date' = MAX(kraken_spot_ohlc[Date])
+		formatString: General Date
+		lineageTag: b75bc869-5086-41a6-9527-85f0e0a89491
+
+	measure 'Selected Date Range' =
+			
+			VAR MinD = [Min Selected Date]
+			VAR MaxD = [Max Selected Date]
+			RETURN
+			    IF(
+			        ISBLANK(MinD) || ISBLANK(MaxD),
+			        "No date selected",
+			        "From " & FORMAT(MinD, "DD MMM YYYY") & " to " & FORMAT(MaxD, "DD MMM YYYY")
+			    )
+		lineageTag: ebd38588-e6ed-44b2-b915-bebae74963b4
+
+	/// Profit or loss of the intraday trade on a single day (USD). Blank when several days are in context.
+	measure 'Simulated Profit 15 min' =
+			// P&L of the intraday trade on ONE day: enter at the selected time of day, exit at the selected later time.
+			VAR EntryT = [Entry Time 15 min]
+			VAR ExitT = [Exit Time 15 min]
+			VAR LiqPrice = [Liquidation Price 15 min]
+			VAR IsLong = SELECTEDVALUE(Simulator[TradeDirection]) = "Long"
+			VAR Window = FILTER(ALL(kraken_spot_ohlc[15 min buckets]), kraken_spot_ohlc[15 min buckets] >= EntryT && kraken_spot_ohlc[15 min buckets] <= ExitT)
+			VAR WasLiquidated =
+			    IF(
+			        IsLong,
+			        CALCULATE(MIN(kraken_spot_ohlc[low_price]), Window) <= LiqPrice,
+			        CALCULATE(MAX(kraken_spot_ohlc[high_price]), Window) >= LiqPrice
+			    )
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[Date]) && NOT ISBLANK(LiqPrice) && ExitT > EntryT,
+			        IF(
+			            WasLiquidated,
+			            -[Invested amount Value],
+			            ([Exit Price 15 min] - [Entry Price 15 min]) * [Position Volume 15 min] * IF(IsLong, 1, -1)
+			        )
+			    )
+		formatString: \$#,0.00;-\$#,0.00
+		lineageTag: cba8c232-0a6d-4ab1-b425-6a31a56a2833
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Sum of daily intraday results over the selected days (USD).
+	measure 'Total Simulated Profit' =
+			// Repeat the intraday trade every day in the selected range; each day risks its own margin.
+			SUMX(VALUES(kraken_spot_ohlc[Date]), CALCULATE([Simulated Profit 15 min]))
+		formatString: \$#,0.00;-\$#,0.00
+		displayFolder: Strategy stats
+		lineageTag: a87bb1e9-d898-4038-98c2-6f385c510ad5
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Days in the selected range on which the intraday trade could be simulated.
+	measure 'Traded Days' =
+			COUNTROWS(
+			    FILTER(
+			        VALUES(kraken_spot_ohlc[Date]),
+			        NOT ISBLANK(CALCULATE([Simulated Profit 15 min]))
+			    )
+			)
+		formatString: 0
+		displayFolder: Strategy stats
+		lineageTag: 42ed3813-2b27-4467-b0ec-d82cfe65c8c9
+
+	/// Share of traded days that ended in profit.
+	measure 'Winning Days %' =
+			DIVIDE(
+			    COUNTROWS(
+			        FILTER(
+			            VALUES(kraken_spot_ohlc[Date]),
+			            CALCULATE([Simulated Profit 15 min]) > 0
+			        )
+			    ),
+			    [Traded Days]
+			)
+		formatString: 0.0%
+		displayFolder: Strategy stats
+		lineageTag: 9f514baa-0ed5-4a84-a554-7d1c40ffdbd8
+
+	/// Days on which the position hit its liquidation price.
+	measure 'Liquidated Days' =
+			VAR Invested = [Invested amount Value]
+			VAR Liquidated =
+			    COUNTROWS(
+			        FILTER(
+			            VALUES(kraken_spot_ohlc[Date]),
+			            CALCULATE([Simulated Profit 15 min]) = -Invested
+			        )
+			    )
+			RETURN
+			    IF(NOT ISBLANK([Traded Days]), Liquidated + 0)
+		formatString: 0
+		displayFolder: Strategy stats
+		lineageTag: 19448ef3-fef8-412c-be82-f899394f315c
+
+	column Date
+		isHidden
+		formatString: 0
+		lineageTag: 6a9e2ed7-b143-403d-a198-8f40b1ce1140
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Intraday Strategy' = calculated
+		mode: import
+		source = Row("Date", BLANK())
+
+	annotation PBI_Id = a39f961d9a6946689146abc799318f0f
+
+	annotation 436ba87b-9c83-4389-a31b-ebd06a36be98 = {"Expression":""}
+

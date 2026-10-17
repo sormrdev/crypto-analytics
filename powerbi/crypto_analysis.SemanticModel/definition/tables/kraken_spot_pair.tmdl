@@ -1,0 +1,29 @@
+table kraken_spot_pair
+	lineageTag: bec7dede-5de4-4e7b-8711-ac251ef7bcf7
+
+	column pair_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 2de480d0-7b02-441a-87b8-fe9f00ffeacc
+		summarizeBy: none
+		sourceColumn: pair_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column symbol
+		dataType: string
+		lineageTag: 861c18e6-153e-411c-8e39-fcd3e065f186
+		summarizeBy: none
+		sourceColumn: symbol
+
+		annotation SummarizationSetBy = Automatic
+
+	partition kraken_spot_pair = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    public_pair = Source{[Schema="public",Item="pair"]}[Data]
+				in
+				    public_pair
+

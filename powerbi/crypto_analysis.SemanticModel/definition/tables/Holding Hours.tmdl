@@ -1,0 +1,25 @@
+/// What-if parameter: how long the simulated position is held.
+table 'Holding Hours'
+	lineageTag: a1efcbcc-5969-4249-b9ff-bab1b76cb861
+
+	/// Selected holding period in hours (defaults to 24).
+	measure 'Holding Hours Value' = SELECTEDVALUE('Holding Hours'[Holding Hours], 24)
+		formatString: 0
+		lineageTag: 6829be46-ee8c-4be1-9913-90de44e47617
+
+	column 'Holding Hours'
+		dataType: int64
+		formatString: 0
+		lineageTag: 801492c5-2d1f-4b51-ab6c-7e187a31f7e4
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 0
+				}
+
+	partition 'Holding Hours' = calculated
+		mode: import
+		source = GENERATESERIES(1, 720, 1)
+

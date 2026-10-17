@@ -1,0 +1,27 @@
+table Leverage
+	lineageTag: 88aee53e-de73-443e-a84f-22a006e0b4e4
+
+	/// Selected leverage (defaults to 1x).
+	measure 'Leverage Value' = SELECTEDVALUE(Leverage[Leverage], 1)
+		formatString: 0
+		lineageTag: 04ea61f8-4477-4def-9d68-b2a99def1162
+
+	column Leverage
+		formatString: 0
+		lineageTag: 9bde02a1-7bd4-4008-bdaa-f02758422380
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 0
+				}
+
+		annotation SummarizationSetBy = User
+
+	partition Leverage = calculated
+		mode: import
+		source = GENERATESERIES(1, 20, 1)
+
+	annotation PBI_Id = aefc6442d9f0404d8a1f234b3f4ff082
+

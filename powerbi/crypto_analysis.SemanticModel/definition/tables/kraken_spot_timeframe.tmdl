@@ -1,0 +1,38 @@
+table kraken_spot_timeframe
+	lineageTag: db193d9d-5452-4f0d-8e46-6169122b3632
+
+	column timeframe_id
+		dataType: int64
+		formatString: 0
+		lineageTag: e02a1fc3-b453-4da7-b44a-8beadc092975
+		summarizeBy: none
+		sourceColumn: timeframe_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column code
+		dataType: string
+		lineageTag: e09071e0-279d-4bce-a7b5-f9294c231fc9
+		summarizeBy: none
+		sourceColumn: code
+
+		annotation SummarizationSetBy = Automatic
+
+	column duration_seconds
+		dataType: int64
+		formatString: 0
+		lineageTag: 2b38071e-c5e6-441d-b5e6-d096ff23ae6d
+		summarizeBy: none
+		sourceColumn: duration_seconds
+
+		annotation SummarizationSetBy = Automatic
+
+	partition kraken_spot_timeframe = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    public_timeframe = Source{[Schema="public",Item="timeframe"]}[Data]
+				in
+				    public_timeframe
+

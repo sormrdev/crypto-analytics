@@ -1,0 +1,16 @@
+relationship 545839cb-fc94-4864-ad3f-a358ec72d6af
+	fromColumn: kraken_spot_ohlc.pair_id
+	toColumn: kraken_spot_pair.pair_id
+
+	annotation PBI_IsFromSource = FS
+
+relationship 5b8c09f4-bcdc-40aa-b2b7-b4474b49f5a2
+	fromColumn: kraken_spot_ohlc.timeframe_id
+	toColumn: kraken_spot_timeframe.timeframe_id
+
+	annotation PBI_IsFromSource = FS
+
+relationship kraken_spot_ohlc_Date_Calendar_Date
+	fromColumn: kraken_spot_ohlc.Date
+	toColumn: Calendar.Date
+

@@ -1,0 +1,106 @@
+table Simulator
+	lineageTag: fd6d6873-21dc-4afb-81ca-5bec586188ba
+
+	/// Notional value of the position: margin x leverage.
+	measure 'Position Size' = [Invested amount Value] * [Leverage Value]
+		formatString: \$#,0.00
+		lineageTag: 8b85e791-2410-4112-a3a6-aed92ed8ed2d
+
+	/// Position size in base currency at the entry price.
+	measure 'Position Volume' = DIVIDE([Position Size], [Entry Price])
+		formatString: #,0.########
+		lineageTag: 3a1bc3fd-fea9-4ebd-9434-09ef4fbfd6af
+
+	/// Price at which the position would be liquidated.
+	measure 'Liquidation Price' =
+			// Isolated-margin liquidation price: the position is closed when losses eat the margin down to the maintenance level.
+			VAR Leverage = [Leverage Value]
+			VAR EntryPrice = [Entry Price]
+			VAR MMR = [Maintenance Margin Rate]
+			RETURN
+			    IF(
+			        NOT ISBLANK(EntryPrice) && Leverage > 0,
+			        SWITCH(
+			            SELECTEDVALUE(Simulator[TradeDirection]),
+			            "Long", EntryPrice * (1 - 1 / Leverage + MMR),
+			            "Short", EntryPrice * (1 + 1 / Leverage - MMR)
+			        )
+			    )
+		formatString: #,0.####
+		lineageTag: d0dae429-1dad-4c31-a345-8e94e5481b3e
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Profit or loss of the simulated trade (USD).
+	measure 'Simulated Profit' =
+			// P&L of one trade from the entry candle until entry + holding period; a liquidation loses the whole margin.
+			VAR EntryT = [Entry Time Selection]
+			VAR ExitT = [Exit Time Selection]
+			VAR LiqPrice = [Liquidation Price]
+			VAR ExitPrice = [Exit Price]
+			VAR IsLong = SELECTEDVALUE(Simulator[TradeDirection]) = "Long"
+			VAR Window = FILTER(ALL(kraken_spot_ohlc[candle_time]), kraken_spot_ohlc[candle_time] >= EntryT - 1 / 1440 && kraken_spot_ohlc[candle_time] <= ExitT + 1 / 1440)
+			VAR WasLiquidated =
+			    IF(
+			        IsLong,
+			        CALCULATE(MIN(kraken_spot_ohlc[low_price]), Window) <= LiqPrice,
+			        CALCULATE(MAX(kraken_spot_ohlc[high_price]), Window) >= LiqPrice
+			    )
+			RETURN
+			    IF(
+			        NOT ISBLANK(LiqPrice) && NOT ISBLANK(ExitPrice),
+			        IF(
+			            WasLiquidated,
+			            -[Invested amount Value],
+			            (ExitPrice - [Entry Price]) * [Position Volume] * IF(IsLong, 1, -1)
+			        )
+			    )
+		formatString: \$#,0.00;-\$#,0.00
+		lineageTag: 242fb937-5da5-4fd8-9dad-3bffb478eef4
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Assumed maintenance margin rate for liquidation prices (1%, typical for major pairs at low position sizes). Must stay below 1 / max leverage, otherwise positions liquidate at entry.
+	measure 'Maintenance Margin Rate' = 0.01
+		formatString: 0.0%
+		isHidden
+		displayFolder: Parameters
+		lineageTag: 9c94bdd9-5cbb-4687-ae29-ac4a70b7134f
+
+	/// Close price, shown only inside the selected trade window (plus a 10% margin on both sides) - used by the price chart.
+	measure 'Price In Trade Window' =
+			VAR EntryT = [Entry Time Selection]
+			VAR ExitT = [Exit Time Selection]
+			VAR Pad = (ExitT - EntryT) * 0.1
+			VAR T = MAX(kraken_spot_ohlc[candle_time])
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[symbol]) && ExitT > EntryT && T >= EntryT - Pad && T <= ExitT + Pad,
+			        AVERAGE(kraken_spot_ohlc[close_price])
+			    )
+		formatString: #,0.####
+		displayFolder: Chart
+		lineageTag: 8d6eec21-e425-4387-a34d-c2db15f94f6e
+
+	column TradeDirection
+		lineageTag: 1dd49b21-284e-483b-b09a-2093b3a94516
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [TradeDirection]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Simulator = calculated
+		mode: import
+		source =
+				
+				DATATABLE(
+				    "TradeDirection", STRING,
+				    {
+				        {"Long"},
+				        {"Short"}
+				    }
+				)
+
+	annotation PBI_Id = 50b3214302e1466399a58db9ebda5272
+

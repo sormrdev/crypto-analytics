@@ -1,0 +1,170 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 104,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 1186.5463905959896,
+            "y": 343.54524781035315
+          },
+          "nodeIndex": "kraken_spot_ohlc",
+          "size": {
+            "height": 296,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1470.7232788307197,
+            "y": 440.87024044278758
+          },
+          "nodeIndex": "kraken_spot_pair",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 902.36163941535983,
+            "y": 396.6103569876945
+          },
+          "nodeIndex": "kraken_spot_timeframe",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 447.54524781035309
+          },
+          "nodeIndex": "EntrySelection",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 445.02035370861711
+          },
+          "nodeIndex": "ExitSelection",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 423.55200082710689
+          },
+          "nodeIndex": "Leverage",
+          "nodeLineageTag": "88aee53e-de73-443e-a84f-22a006e0b4e4",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 415.03048323374765
+          },
+          "nodeIndex": "Invested amount",
+          "nodeLineageTag": "8c97a179-e3f7-49d2-936a-c685d2e9b335",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 414.24820684370889
+          },
+          "nodeIndex": "Simulator",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 366.31467038106337
+          },
+          "nodeIndex": "Intraday Strategy",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 323.17448756468241
+          },
+          "nodeIndex": "MarketHours",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 852.36163941535983,
+            "y": 187.60318176785105
+          },
+          "nodeIndex": "Calendar",
+          "nodeLineageTag": "88bfd167-c707-47d6-a6d8-84043660247d",
+          "size": {
+            "height": 248,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 902.36163941535983,
+            "y": 180.50880345224493
+          },
+          "nodeIndex": "Holding Hours",
+          "nodeLineageTag": "a1efcbcc-5969-4249-b9ff-bab1b76cb861",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}

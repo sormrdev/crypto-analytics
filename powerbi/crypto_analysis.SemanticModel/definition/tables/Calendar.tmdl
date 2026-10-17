@@ -1,0 +1,66 @@
+/// Date dimension covering the loaded candles (UTC days).
+table Calendar
+	lineageTag: 88bfd167-c707-47d6-a6d8-84043660247d
+	dataCategory: Time
+
+	column Date
+		isUnique
+		formatString: yyyy-mm-dd
+		lineageTag: 668d6aa8-0bc8-41bc-b1ce-c7e13bd9e75e
+		isNameInferred
+		sourceColumn: [Date]
+
+	column Year
+		lineageTag: a25f82b1-07fc-4eea-b234-910bf8ab1796
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Year]
+
+	column 'Month Number'
+		isHidden
+		lineageTag: 784a8b15-e95d-405f-bebc-aa2dabf7e530
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Month Number]
+
+	column Month
+		lineageTag: 95295c5f-583f-4aae-9e31-00c78ec2dcc9
+		isNameInferred
+		sourceColumn: [Month]
+		sortByColumn: 'Month Number'
+
+	column Week
+		lineageTag: 0c88283c-6d83-44f0-8b29-51ef0e7156c3
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Week]
+
+	column 'Weekday Number'
+		isHidden
+		lineageTag: 185932f6-bc59-4f66-b724-612e2d7f1f36
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Weekday Number]
+
+	column Weekday
+		lineageTag: 7164412a-f4a2-46f9-9aa2-f3879035e91a
+		isNameInferred
+		sourceColumn: [Weekday]
+		sortByColumn: 'Weekday Number'
+
+	partition Calendar = calculated
+		mode: import
+		source =
+				VAR FirstDay = MIN(kraken_spot_ohlc[Date])
+				VAR LastDay = MAX(kraken_spot_ohlc[Date])
+				RETURN
+				    ADDCOLUMNS(
+				        CALENDAR(FirstDay, LastDay),
+				        "Year", YEAR([Date]),
+				        "Month Number", MONTH([Date]),
+				        "Month", FORMAT([Date], "mmm yyyy"),
+				        "Week", WEEKNUM([Date], 21),
+				        "Weekday Number", WEEKDAY([Date], 2),
+				        "Weekday", FORMAT([Date], "ddd")
+				    )
+

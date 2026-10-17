@@ -81,3 +81,21 @@ def test_rejects_implausible_candle_time(session, pair_id):
                    Decimal("0"))
     with pytest.raises(Exception, match="chk_candle_time_plausible"):
         repo.upsert_candles(session, pair_id, TF, [epoch])
+
+
+def test_reporting_view_exposes_liquid_pairs_in_utc(session, pair_id):
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    whale = Candle(now, Decimal("100"), Decimal("100"), Decimal("100"), Decimal("100"), Decimal("20000"))
+    repo.upsert_candles(session, pair_id, TF, [whale])  # 2M USD turnover -> liquid
+    row = session.execute(text("SELECT candle_time_utc, symbol FROM reporting.candles_15m WHERE pair_id = :p"),
+                          {"p": pair_id}).one()
+    assert row.symbol == "TESTPAIRUSD"
+    assert row.candle_time_utc == now.replace(tzinfo=None)  # naive, already UTC
+
+
+def test_reporting_view_drops_illiquid_pairs(session, pair_id):
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    tiny = Candle(now, Decimal("1"), Decimal("1"), Decimal("1"), Decimal("1"), Decimal("10"))  # 10 USD
+    repo.upsert_candles(session, pair_id, TF, [tiny])
+    assert session.scalar(text("SELECT count(*) FROM reporting.candles_15m WHERE pair_id = :p"),
+                          {"p": pair_id}) == 0

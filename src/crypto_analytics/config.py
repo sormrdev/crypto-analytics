@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -21,3 +22,18 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def postgres_env(database_url: str) -> dict[str, str]:
+    """The standard libpq variables (PGHOST, ...) for a SQLAlchemy URL - how dbt's profile connects."""
+    url = make_url(database_url)
+    env = {
+        "PGHOST": url.host or "localhost",
+        "PGPORT": str(url.port or 5432),
+        "PGUSER": url.username or "",
+        "PGPASSWORD": url.password or "",
+        "PGDATABASE": url.database or "",
+    }
+    if sslmode := url.query.get("sslmode"):
+        env["PGSSLMODE"] = sslmode
+    return env

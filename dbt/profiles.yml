@@ -1,0 +1,15 @@
+# Connection settings come from the standard PostgreSQL environment variables.
+# `crypto dbt ...` fills them from CRYPTO_DATABASE_URL, so the pipeline and dbt share one setting.
+crypto_analytics:
+  target: default
+  outputs:
+    default:
+      type: postgres
+      host: "{{ env_var('PGHOST', 'localhost') }}"
+      port: "{{ env_var('PGPORT', '5432') | int }}"
+      user: "{{ env_var('PGUSER', 'postgres') }}"
+      password: "{{ env_var('PGPASSWORD', '') }}"
+      dbname: "{{ env_var('PGDATABASE', 'kraken_spot_analysis') }}"
+      sslmode: "{{ env_var('PGSSLMODE', 'prefer') }}"
+      schema: public
+      threads: 4

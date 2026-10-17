@@ -1,0 +1,23 @@
+name: crypto_analytics
+version: "1.0.0"
+profile: crypto_analytics
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+vars:
+  reporting_window_days: 365   # history the report covers
+  min_turnover_usd: 1000000    # pairs below this turnover in the window are left out
+  min_gap_candles: 4           # shorter holes are normal for thinly traded pairs
+
+models:
+  crypto_analytics:
+    staging:
+      # One clean view per raw table, nothing joined or filtered yet.
+      +schema: staging
+      +materialized: view
+    marts:
+      # What Power BI reads.
+      +schema: reporting
+      +materialized: view

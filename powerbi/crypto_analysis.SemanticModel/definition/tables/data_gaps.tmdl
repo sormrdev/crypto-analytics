@@ -1,0 +1,91 @@
+/// Holes of at least 4 missing 15m candles (dbt model reporting.data_gaps). Open gap = the pair stopped updating.
+table data_gaps
+	lineageTag: a5248095-3618-4f8c-8c65-c6b0caa8fd32
+
+	/// Number of holes in the current selection.
+	measure Gaps = COUNTROWS(data_gaps) + 0
+		formatString: #,0
+		displayFolder: Data quality
+		lineageTag: 45523933-b455-42d5-bb5c-8f7da051bc50
+
+	/// Candles missing inside the holes.
+	measure 'Missing Candles' = SUM(data_gaps[missing_candles]) + 0
+		formatString: #,0
+		displayFolder: Data quality
+		lineageTag: 157f1465-e6d3-48ab-b694-861aa86246be
+
+	/// Length of the biggest hole in hours.
+	measure 'Largest Gap (hours)' = MAX(data_gaps[missing_hours]) + 0
+		formatString: #,0.0
+		displayFolder: Data quality
+		lineageTag: 82037d13-915f-4c23-926d-170c1df3c3ca
+
+	column pair_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: b18d259c-a108-4904-a372-9da44470eadd
+		summarizeBy: none
+		sourceColumn: pair_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Last candle before the hole (UTC).
+	column gap_start_utc
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:nn
+		lineageTag: b5eaa4d2-8e16-409f-ad8e-9cc44a8fdc91
+		summarizeBy: none
+		sourceColumn: gap_start_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	/// First candle after the hole (UTC); for an open gap, the current 15-minute slot.
+	column gap_end_utc
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:nn
+		lineageTag: 80baea80-9722-4ce2-9414-1d2d97db2a1c
+		summarizeBy: none
+		sourceColumn: gap_end_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column missing_candles
+		dataType: int64
+		formatString: #,0
+		lineageTag: 2bb74375-7242-4dc8-9a49-051cb1d94e77
+		summarizeBy: none
+		sourceColumn: missing_candles
+
+		annotation SummarizationSetBy = Automatic
+
+	column missing_hours
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 4dea3c16-9c02-49f6-9157-265e8b23a775
+		summarizeBy: none
+		sourceColumn: missing_hours
+
+		annotation SummarizationSetBy = Automatic
+
+	/// True when the pair has no candle after the hole yet.
+	column is_open
+		dataType: boolean
+		lineageTag: 8c653dcc-cd3c-4329-b9e5-9e5a0b7fdf2e
+		summarizeBy: none
+		sourceColumn: is_open
+
+		annotation SummarizationSetBy = Automatic
+
+	partition data_gaps = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    Gaps = Source{[Schema = "reporting", Item = "data_gaps"]}[Data],
+				    Typed = Table.TransformColumnTypes(Gaps, {
+				        {"pair_id", Int64.Type}, {"gap_start_utc", type datetime}, {"gap_end_utc", type datetime},
+				        {"missing_candles", Int64.Type}, {"missing_hours", type number}, {"is_open", type logical}})
+				in
+				    Typed
+

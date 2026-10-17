@@ -2,8 +2,8 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "5b17087dec95c2c60073",
   "position": {
-    "x": 16,
-    "y": 504,
+    "x": 14.054711246200606,
+    "y": 550.68693009118431,
     "z": 7000,
     "height": 80,
     "width": 300,
@@ -41,7 +41,7 @@
             "numericStart": {
               "expr": {
                 "Literal": {
-                  "Value": "24D"
+                  "Value": "1D"
                 }
               }
             }
@@ -56,7 +56,7 @@
                 "Version": 2,
                 "From": [
                   {
-                    "Name": "l",
+                    "Name": "h",
                     "Entity": "Holding Hours",
                     "Type": 0
                   }
@@ -70,7 +70,7 @@
                           "Column": {
                             "Expression": {
                               "SourceRef": {
-                                "Source": "l"
+                                "Source": "h"
                               }
                             },
                             "Property": "Holding Hours"
@@ -78,7 +78,7 @@
                         },
                         "Right": {
                           "Literal": {
-                            "Value": "24D"
+                            "Value": "1D"
                           }
                         }
                       }

@@ -1,0 +1,70 @@
+/// Candles present versus expected per pair and UTC day (dbt model reporting.daily_coverage), including empty days.
+table daily_coverage
+	lineageTag: 19e89495-7f6c-459c-ad6f-732e227ced9d
+
+	/// Share of expected 15m candles that exist in the selection.
+	measure 'Coverage %' =
+			VAR Ratio = DIVIDE(SUM(daily_coverage[candles]), SUM(daily_coverage[expected_candles]))
+			RETURN IF(Ratio > 1, 1, Ratio)
+		formatString: 0.0%
+		displayFolder: Data quality
+		lineageTag: 0f177c57-3a37-4a63-9f44-55e9fbef79d5
+
+	/// Days in the selection without a single candle.
+	measure 'Days Without Data' = COALESCE(CALCULATE(COUNTROWS(daily_coverage), daily_coverage[candles] = 0), 0)
+		formatString: #,0
+		displayFolder: Data quality
+		lineageTag: 772e830b-a7aa-40ac-9509-e309e41bbdae
+
+	column pair_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: fa4bb5c9-dfdd-4dda-8d5c-5bafba9baee0
+		summarizeBy: none
+		sourceColumn: pair_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column day
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-mm-dd
+		lineageTag: 9df9392d-26c3-4d5d-ba68-0d635d32218a
+		summarizeBy: none
+		sourceColumn: day
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column candles
+		dataType: int64
+		formatString: #,0
+		lineageTag: e7f32c59-f2e2-40f8-8e93-0b98e8f6a288
+		summarizeBy: sum
+		sourceColumn: candles
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_candles
+		dataType: int64
+		formatString: #,0
+		lineageTag: 69641228-7fa4-4f87-8b83-e9de3b82c93c
+		summarizeBy: sum
+		sourceColumn: expected_candles
+
+		annotation SummarizationSetBy = Automatic
+
+	partition daily_coverage = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    Coverage = Source{[Schema = "reporting", Item = "daily_coverage"]}[Data],
+				    Selected = Table.SelectColumns(Coverage, {"pair_id", "day", "candles", "expected_candles"}),
+				    Typed = Table.TransformColumnTypes(Selected, {
+				        {"pair_id", Int64.Type}, {"day", type date}, {"candles", Int64.Type}, {"expected_candles", Int64.Type}})
+				in
+				    Typed
+

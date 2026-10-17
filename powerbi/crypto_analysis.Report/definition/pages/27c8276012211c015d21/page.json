@@ -8,15 +8,15 @@
   "filterConfig": {
     "filters": [
       {
-        "name": "09d613690805e8845c04",
+        "name": "e67d44e198a9594583a0",
         "field": {
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "kraken_spot_ohlc"
+                "Entity": "Calendar"
               }
             },
-            "Property": "symbol"
+            "Property": "Month"
           }
         },
         "type": "Categorical",
@@ -24,8 +24,8 @@
           "Version": 2,
           "From": [
             {
-              "Name": "k",
-              "Entity": "kraken_spot_ohlc",
+              "Name": "c",
+              "Entity": "Calendar",
               "Type": 0
             }
           ],
@@ -38,10 +38,10 @@
                       "Column": {
                         "Expression": {
                           "SourceRef": {
-                            "Source": "k"
+                            "Source": "c"
                           }
                         },
-                        "Property": "symbol"
+                        "Property": "Month"
                       }
                     }
                   ],
@@ -49,127 +49,28 @@
                     [
                       {
                         "Literal": {
-                          "Value": "'XBTUSD'"
-                        }
-                      }
-                    ]
-                  ]
-                }
-              }
-            }
-          ]
-        },
-        "howCreated": "User",
-        "objects": {
-          "general": [
-            {
-              "properties": {
-                "requireSingleSelect": {
-                  "expr": {
-                    "Literal": {
-                      "Value": "true"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "1cf5d19e25aec0d08db1",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "kraken_spot_ohlc"
-              }
-            },
-            "Property": "Date"
-          }
-        },
-        "type": "Categorical",
-        "howCreated": "User",
-        "objects": {
-          "general": [
-            {
-              "properties": {
-                "isInvertedSelectionMode": {
-                  "expr": {
-                    "Literal": {
-                      "Value": "true"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "fe59349082aeb9005d95",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "kraken_spot_ohlc"
-              }
-            },
-            "Property": "Weeks from now"
-          }
-        },
-        "type": "Categorical",
-        "filter": {
-          "Version": 2,
-          "From": [
-            {
-              "Name": "k",
-              "Entity": "kraken_spot_ohlc",
-              "Type": 0
-            }
-          ],
-          "Where": [
-            {
-              "Condition": {
-                "In": {
-                  "Expressions": [
-                    {
-                      "Column": {
-                        "Expression": {
-                          "SourceRef": {
-                            "Source": "k"
-                          }
-                        },
-                        "Property": "Weeks from now"
-                      }
-                    }
-                  ],
-                  "Values": [
-                    [
-                      {
-                        "Literal": {
-                          "Value": "1L"
+                          "Value": "'Aug 2026'"
                         }
                       }
                     ],
                     [
                       {
                         "Literal": {
-                          "Value": "2L"
+                          "Value": "'Sep 2026'"
                         }
                       }
                     ],
                     [
                       {
                         "Literal": {
-                          "Value": "3L"
+                          "Value": "'Oct 2026'"
                         }
                       }
                     ],
                     [
                       {
                         "Literal": {
-                          "Value": "4L"
+                          "Value": "'Jul 2026'"
                         }
                       }
                     ]
@@ -186,27 +87,6 @@
               "properties": {}
             }
           ]
-        }
-      }
-    ]
-  },
-  "pageBinding": {
-    "name": "e40d8efcca47509e536c",
-    "type": "Drillthrough",
-    "parameters": [
-      {
-        "name": "f258409f0ad7b84817b8",
-        "boundFilter": "09d613690805e8845c04",
-        "qnaSingleSelectRequired": true,
-        "fieldExpr": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "kraken_spot_ohlc"
-              }
-            },
-            "Property": "symbol"
-          }
         }
       }
     ]

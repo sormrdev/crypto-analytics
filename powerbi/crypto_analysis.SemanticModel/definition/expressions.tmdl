@@ -9,3 +9,4 @@ expression DatabaseName = "kraken_spot_analysis" meta [IsParameterQuery=true, Ty
 	lineageTag: 7770de86-0c15-4012-aef9-2d4a4a2d9ac8
 
 	annotation PBI_ResultType = Text
+

@@ -90,7 +90,7 @@ table kraken_spot_ohlc
 		annotation SummarizationSetBy = Automatic
 
 	/// Kraken pair altname, e.g. XBTUSD.
-	column 'symbol'
+	column symbol
 		dataType: string
 		lineageTag: 53c35aa8-6b2f-4e54-8531-91780343c8f3
 		summarizeBy: none

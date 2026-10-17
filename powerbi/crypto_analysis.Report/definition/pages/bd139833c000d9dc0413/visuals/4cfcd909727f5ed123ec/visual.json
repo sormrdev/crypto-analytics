@@ -2,8 +2,8 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "4cfcd909727f5ed123ec",
   "position": {
-    "x": 172,
-    "y": 428,
+    "x": 170.05471124620061,
+    "y": 474.68693009118647,
     "z": 6000,
     "height": 64,
     "width": 144,
@@ -83,7 +83,7 @@
                 "Version": 2,
                 "From": [
                   {
-                    "Name": "t",
+                    "Name": "e",
                     "Entity": "EntrySelection",
                     "Type": 0
                   }
@@ -97,7 +97,7 @@
                             "Column": {
                               "Expression": {
                                 "SourceRef": {
-                                  "Source": "t"
+                                  "Source": "e"
                                 }
                               },
                               "Property": "entry_candle_15min"
@@ -108,7 +108,7 @@
                           [
                             {
                               "Literal": {
-                                "Value": "datetime'1899-12-30T10:00:00'"
+                                "Value": "datetime'1899-12-30T12:30:00'"
                               }
                             }
                           ]

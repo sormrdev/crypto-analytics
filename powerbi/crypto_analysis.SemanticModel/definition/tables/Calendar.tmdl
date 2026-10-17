@@ -1,4 +1,4 @@
-/// Date dimension covering the loaded candles (UTC days).
+/// Date dimension from the first loaded candle to today (UTC days).
 table Calendar
 	lineageTag: 88bfd167-c707-47d6-a6d8-84043660247d
 	dataCategory: Time
@@ -52,7 +52,8 @@ table Calendar
 		mode: import
 		source =
 				VAR FirstDay = MIN(kraken_spot_ohlc[Date])
-				VAR LastDay = MAX(kraken_spot_ohlc[Date])
+				// Up to today, so days without any candle still get a row (data quality page).
+				VAR LastDay = MAX(MAX(kraken_spot_ohlc[Date]), MAX(daily_coverage[day]))
 				RETURN
 				    ADDCOLUMNS(
 				        CALENDAR(FirstDay, LastDay),

@@ -1,7 +1,57 @@
 # Crypto Analytics
 
-Data pipeline that collects **Kraken spot market data** into **PostgreSQL** and feeds a **Power BI** report
-with a leveraged futures-position simulator (entry/exit point, leverage, direction → P&L and liquidation price).
+End-to-end analytics project on **Kraken crypto market data**: a Python pipeline loads 1.5M 15-minute candles
+for 323 USD pairs into **PostgreSQL**, a **Power BI** report explores intraday patterns and simulates leveraged
+trades, and **SQL** checks which of those patterns survive a statistical test.
+
+**Main results:** the US trading session carries over a third of Bitcoin's turnover and roughly double the
+volatility of the Asian morning. The "best time of day to buy" visible on the chart is mostly the market's
+downtrend, not a real effect. And the best intraday strategy found in Jan–Apr fell apart from May on.
+[Key findings ↓](#key-findings)
+
+**Skills shown:** SQL (window functions, CTEs, views) · Power BI (DAX, Power Query, PBIP in Git) ·
+Python (httpx, SQLAlchemy, Typer, pytest) · data-quality checks · basic inference (t-statistics, train/test split).
+
+| Market overview | Position simulator | Intraday strategy |
+|---|---|---|
+| ![Market overview](docs/img/market-overview.png) | ![Position simulator](docs/img/position-simulator.png) | ![Intraday strategy](docs/img/intraday-strategy.png) |
+
+## Key findings
+
+All numbers are reproducible with [`analysis/findings.sql`](analysis/findings.sql), which reads the same view as the report.
+Times are UTC. XBT (Bitcoin) data runs from 1 Jan to 16 Aug 2026; the cross-pair figures cover 7 Jun – 16 Aug 2026.
+
+1. **Turnover is extremely concentrated.** 10 of 323 pairs account for 84.7% of the $27.0B USD turnover,
+   and Bitcoin alone for 27.4%. Stablecoins, FX and tokenised gold (USDT, USDC, EUR, GBP, PAXG) make up 40.7%,
+   so a large share of "crypto" volume is really dollar conversion.
+2. **The US session drives the market.** From 13:00 to 18:00 UTC (21% of the day), XBT trades 35.6% of its daily
+   turnover. The average 15-minute move peaks at 0.235% at 14:00, right after the New York open (13:30), against 0.117% at 10:00.
+3. **The "cheapest hour" is mostly trend, not a pattern.** On the overview chart XBT trades above its daily average
+   in Asian hours (+0.11% at 01:00) and below it in the US evening (−0.10% at 18:00). But XBT fell 28% over the period
+   (−0.15% per day), which alone produces that shape. Tested per hour, no hour's mean return is significantly
+   different from zero (largest |t| = 1.87 across 24 hours, 227 days).
+4. **Liquidation risk jumps between 10x and 20x leverage.** For a 24-hour XBT position opened at any 15-minute candle,
+   2x and 5x were never liquidated. At 10x, 0.7% of longs were liquidated; at 20x, 8.9% (7.6% of shorts). At 20x, a 4% move
+   against the position is enough, and that happens regularly. SOL at 20x: about 13% in both directions.
+5. **The best intraday strategy is overfitted.** Of 276 "long from hour A to hour B" windows, the best on Jan–Apr
+   (19:00 → 23:00: +0.14% per day, 57% winning days) earned only +0.06% with 48% winning days on May–Aug (t = 0.78).
+   Even in-sample it was not significant (t = 1.53) once you account for choosing it from 276 candidates, and either
+   figure is below a typical round-trip fee on perpetual futures (~0.1%).
+
+**So what:** the time-of-day structure that holds up is about *risk*, not *direction*. Volatility and liquidity are
+predictable by session, which matters for sizing, stops and leverage. The direction of price over the day is not.
+
+### Data quality and caveats
+
+- **Collection gaps:** all pairs have holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`.
+  The findings use only gap-free windows (query 5 skips any entry without 24 hours of continuous data).
+- **Survivorship bias:** the report keeps pairs with at least $1M turnover in the *current* 365-day window,
+  so pairs that died earlier are missing.
+- **Simulator assumptions:** isolated margin, 1% maintenance margin, no fees, funding or slippage. Prices are
+  spot candles used as a proxy for futures.
+- **Session times:** London and New York opens use summer time (07:00 and 13:30 UTC).
+
+## How it works
 
 ```mermaid
 flowchart LR
@@ -12,7 +62,7 @@ flowchart LR
     DB --> PBI[Power BI<br/>market overview + position simulator]
 ```
 
-## Why two ingestion paths?
+### Why two ingestion paths?
 
 Kraken's OHLC endpoint only returns the **720 most recent candles** (7.5 days of 15-minute data).
 To get a complete history, `backfill` pages through the **raw trade stream** from any start date and
@@ -43,7 +93,9 @@ src/crypto_analytics/
 └── services/            # sync (pairs, OHLC) and trade backfill
 migrations/              # Alembic revisions
 tests/                   # pytest
+analysis/findings.sql    # queries behind the Key findings
 powerbi/                 # Power BI project (PBIP)
+docs/img/                # report screenshots
 ```
 
 ## Setup
@@ -74,6 +126,26 @@ uv run crypto gaps XBTUSD --min-missing 4        # data-quality report
 uv run pytest
 uv run ruff check .
 ```
+
+## Power BI report
+
+`powerbi/crypto_analysis.pbip` (Power BI Project – model in TMDL, report in PBIR, both plain text in Git).
+It reads the `reporting.candles_15m` view (migration `0004`), which already applies the 365-day window,
+a 1M USD liquidity filter and UTC conversion, so the report itself stays thin. The connection is set by two
+Power Query parameters, `DatabaseServer` (default `localhost:5432`) and `DatabaseName`
+(Transform data → Edit parameters).
+
+| Page | What it shows |
+|---|---|
+| **Market overview** | Average deviation of the close from its daily mean by time of day (UTC), with Tokyo / Hong Kong / London / New York opens. |
+| **Position simulator** | One leveraged long/short trade between two candles: entry/exit price, position size, liquidation price and P&L. Liquidation is checked against the low/high of every candle in between. |
+| **Intraday strategy** | The same trade repeated every day at fixed entry/exit times: total and average daily P&L, winning-day ratio, liquidated days, daily P&L chart. |
+
+Assumptions: isolated margin, 1% maintenance margin rate (`Maintenance Margin Rate` measure), no fees or funding.
+
+## License
+
+[MIT](LICENSE)
 
 ## Data model
 

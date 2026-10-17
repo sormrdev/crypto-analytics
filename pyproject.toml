@@ -17,6 +17,10 @@ dependencies = [
 crypto = "crypto_analytics.cli:app"
 
 [dependency-groups]
+dbt = [
+    "dbt-core>=1.12,<2",
+    "dbt-postgres>=1.11",
+]
 dev = [
     "pytest>=8.3",
     "ruff>=0.6",
@@ -40,3 +44,7 @@ extend-exclude = ["_legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.uv]
+# `uv sync` installs dbt too; the pipeline itself does not import it.
+default-groups = ["dev", "dbt"]

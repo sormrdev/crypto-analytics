@@ -1,12 +1,15 @@
 """Command-line entry point: `crypto --help`."""
 
 import logging
+import os
+import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from crypto_analytics.config import get_settings
+from crypto_analytics.config import get_settings, postgres_env
 from crypto_analytics.db import repository as repo
 from crypto_analytics.db.session import session_factory
 from crypto_analytics.domain import Timeframe
@@ -21,6 +24,8 @@ app.add_typer(pairs_app, name="pairs")
 app.add_typer(ohlc_app, name="ohlc")
 
 TimeframeOpt = Annotated[str, typer.Option("--timeframe", "-t", help="Candle interval, e.g. 15m, 1h, 1d.")]
+
+DBT_DIR = Path(__file__).resolve().parents[2] / "dbt"
 
 
 def _date(value: str | None) -> datetime | None:
@@ -75,21 +80,52 @@ def backfill(
 
 @app.command()
 def gaps(
-    symbol: str,
+    symbol: Annotated[str | None, typer.Argument(help="Pair to inspect (default: summary of all pairs).")] = None,
     timeframe: TimeframeOpt = "15m",
     min_missing: Annotated[int, typer.Option(help="Report only holes of at least N candles.")] = 4,
+    since: Annotated[str | None, typer.Option(help="Only look at candles from this date (YYYY-MM-DD).")] = None,
+    top: Annotated[int, typer.Option(help="Pairs to show in the summary.")] = 20,
 ) -> None:
-    """Data-quality check: list holes in the stored candle history."""
+    """Data-quality check: list holes in the stored candle history (times in UTC)."""
     tf = Timeframe.from_code(timeframe)
     with session_factory()() as session:
-        pair_id = repo.pair_ids(session, [symbol]).get(symbol)
-        if pair_id is None:
-            raise typer.BadParameter(f"Unknown symbol {symbol}")
-        found = repo.find_gaps(session, pair_id, tf, min_missing)
+        if symbol is None:
+            summary = repo.gap_summary(session, tf, min_missing, _date(since))
+        else:
+            pair_id = repo.pair_ids(session, [symbol]).get(symbol)
+            if pair_id is None:
+                raise typer.BadParameter(f"Unknown symbol {symbol}")
+            found = repo.find_gaps(session, pair_id, tf, min_missing, _date(since))
+
+    if symbol is None:
+        typer.echo(f"{'pair':<14}{'gaps':>6}{'missing':>10}{'largest':>10}  last candle (UTC)")
+        for row in summary[:top]:
+            typer.echo(f"{row.symbol:<14}{row.gaps:>6}{row.missing_candles:>10}{row.largest_gap:>10}  "
+                       f"{row.last_candle.astimezone(UTC):%Y-%m-%d %H:%M}")
+        with_gaps = sum(1 for row in summary if row.gaps)
+        typer.echo(f"{with_gaps} of {len(summary)} pairs have gaps of >= {min_missing} {tf.code} candles"
+                   + (f" (showing {top})." if len(summary) > top else "."))
+        return
+
     for gap in found:
-        typer.echo(f"{gap.after:%Y-%m-%d %H:%M} -> {gap.before:%Y-%m-%d %H:%M}  "
+        after, before = gap.after.astimezone(UTC), gap.before.astimezone(UTC)
+        typer.echo(f"{after:%Y-%m-%d %H:%M} -> {before:%Y-%m-%d %H:%M}  "
                    f"({int(gap.missing.total_seconds() // tf.seconds) - 1} candles missing)")
     typer.echo(f"{len(found)} gaps of >= {min_missing} candles in {symbol} {tf.code}.")
+    if found:
+        biggest = max(found, key=lambda g: g.missing)
+        typer.echo(f"Fill the largest with: crypto backfill {symbol} "
+                   f"--since {biggest.after.astimezone(UTC):%Y-%m-%dT%H:%M} "
+                   f"--until {biggest.before.astimezone(UTC):%Y-%m-%dT%H:%M}")
+
+
+@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def dbt(ctx: typer.Context) -> None:
+    """Run dbt against CRYPTO_DATABASE_URL, e.g. `crypto dbt build` or `crypto dbt source freshness`."""
+    env = os.environ | postgres_env(get_settings().database_url)
+    # PYTHONUTF8: dbt prints non-ASCII symbols, which a Windows console code page cannot encode.
+    env |= {"DBT_PROJECT_DIR": str(DBT_DIR), "DBT_PROFILES_DIR": str(DBT_DIR), "PYTHONUTF8": "1"}
+    raise typer.Exit(subprocess.run(["dbt", *ctx.args], env=env).returncode)
 
 
 if __name__ == "__main__":

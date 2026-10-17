@@ -70,6 +70,21 @@ def test_find_gaps_respects_min_missing(session, pair_id):
     assert len(big) == 1 and big[0].missing == timedelta(minutes=15 * 7)
 
 
+def test_find_gaps_since_ignores_older_holes(session, pair_id):
+    repo.upsert_candles(session, pair_id, TF, [candle(0), candle(5), candle(6), candle(20)])
+    gaps = repo.find_gaps(session, pair_id, TF, min_missing=1, since=T0 + 5 * TF.delta)
+    assert [(g.after, g.before) for g in gaps] == [(T0 + 6 * TF.delta, T0 + 20 * TF.delta)]
+
+
+def test_gap_summary_totals_missing_candles_per_pair(session, pair_id):
+    repo.upsert_candles(session, pair_id, TF, [candle(0), candle(3), candle(4), candle(10)])  # holes of 2 and 5
+    rows = {r.symbol: r for r in repo.gap_summary(session, TF, min_missing=1)}
+    assert rows["TESTPAIRUSD"] == repo.GapSummary("TESTPAIRUSD", gaps=2, missing_candles=7, largest_gap=5,
+                                                  last_candle=T0 + 10 * TF.delta)
+    strict = {r.symbol: r for r in repo.gap_summary(session, TF, min_missing=6)}
+    assert strict["TESTPAIRUSD"].gaps == 0 and strict["TESTPAIRUSD"].missing_candles == 0
+
+
 def test_check_constraints_reject_inconsistent_candles(session, pair_id):
     bad = Candle(T0, Decimal("5"), Decimal("2"), Decimal("1"), Decimal("1.5"), Decimal("1"))  # open > high
     with pytest.raises(Exception, match="chk_high_price"):
@@ -83,19 +98,4 @@ def test_rejects_implausible_candle_time(session, pair_id):
         repo.upsert_candles(session, pair_id, TF, [epoch])
 
 
-def test_reporting_view_exposes_liquid_pairs_in_utc(session, pair_id):
-    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
-    whale = Candle(now, Decimal("100"), Decimal("100"), Decimal("100"), Decimal("100"), Decimal("20000"))
-    repo.upsert_candles(session, pair_id, TF, [whale])  # 2M USD turnover -> liquid
-    row = session.execute(text("SELECT candle_time_utc, symbol FROM reporting.candles_15m WHERE pair_id = :p"),
-                          {"p": pair_id}).one()
-    assert row.symbol == "TESTPAIRUSD"
-    assert row.candle_time_utc == now.replace(tzinfo=None)  # naive, already UTC
-
-
-def test_reporting_view_drops_illiquid_pairs(session, pair_id):
-    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
-    tiny = Candle(now, Decimal("1"), Decimal("1"), Decimal("1"), Decimal("1"), Decimal("10"))  # 10 USD
-    repo.upsert_candles(session, pair_id, TF, [tiny])
-    assert session.scalar(text("SELECT count(*) FROM reporting.candles_15m WHERE pair_id = :p"),
-                          {"p": pair_id}) == 0
+# The reporting layer (liquidity filter, UTC conversion, gaps) is tested by dbt unit tests in dbt/models/marts.

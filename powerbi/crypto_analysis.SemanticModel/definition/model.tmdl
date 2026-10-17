@@ -8,7 +8,7 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
-annotation PBI_QueryOrder = ["DatabaseServer","DatabaseName","kraken_spot_ohlc","kraken_spot_pair","kraken_spot_timeframe"]
+annotation PBI_QueryOrder = ["DatabaseServer","DatabaseName","kraken_spot_ohlc","kraken_spot_pair","kraken_spot_timeframe","data_gaps","daily_coverage"]
 
 annotation PBI_ProTooling = ["DevMode","MCP-PBIModeling"]
 
@@ -24,6 +24,8 @@ ref table 'Intraday Strategy'
 ref table MarketHours
 ref table Calendar
 ref table 'Holding Hours'
+ref table data_gaps
+ref table daily_coverage
 
 ref cultureInfo en-US
 

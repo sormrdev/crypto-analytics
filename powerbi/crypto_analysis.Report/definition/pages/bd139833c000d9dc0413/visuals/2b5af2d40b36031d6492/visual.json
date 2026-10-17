@@ -257,23 +257,5 @@
       ]
     },
     "drillFilterOtherVisuals": true
-  },
-  "filterConfig": {
-    "filters": [
-      {
-        "name": "215a11f555adb57b61d2",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "Simulator"
-              }
-            },
-            "Property": "Liquidation Price"
-          }
-        },
-        "type": "Advanced"
-      }
-    ]
   }
 }

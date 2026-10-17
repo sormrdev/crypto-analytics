@@ -2,8 +2,8 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "b8ee65fe2eedde1748b0",
   "position": {
-    "x": 16,
-    "y": 512,
+    "x": 16.972644376899694,
+    "y": 552.8510638297862,
     "z": 6000,
     "height": 64,
     "width": 144,
@@ -106,7 +106,7 @@
                           [
                             {
                               "Literal": {
-                                "Value": "datetime'1899-12-30T01:30:00'"
+                                "Value": "datetime'1899-12-30T12:45:00'"
                               }
                             }
                           ]

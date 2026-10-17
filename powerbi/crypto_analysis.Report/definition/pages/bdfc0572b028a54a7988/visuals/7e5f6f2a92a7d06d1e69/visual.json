@@ -2,8 +2,8 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "7e5f6f2a92a7d06d1e69",
   "position": {
-    "x": 16,
-    "y": 244,
+    "x": 16.972644376899694,
+    "y": 284.851063829788,
     "z": 3000,
     "height": 80,
     "width": 300,
@@ -232,5 +232,23 @@
       "filterChanges": true
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "b776a201fb762ab1ae68",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Leverage"
+              }
+            },
+            "Property": "Leverage"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

@@ -257,23 +257,5 @@
       ]
     },
     "drillFilterOtherVisuals": true
-  },
-  "filterConfig": {
-    "filters": [
-      {
-        "name": "ef8e7d27aa618c3ed0bc",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "EntrySelection"
-              }
-            },
-            "Property": "Entry Price"
-          }
-        },
-        "type": "Advanced"
-      }
-    ]
   }
 }

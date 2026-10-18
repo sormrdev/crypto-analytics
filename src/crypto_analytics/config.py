@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     http_timeout_s: float = 30.0
     max_retries: int = 5
     quote_asset: str = "ZUSD"
+    # How many of the most traded pairs `crypto pairs rank` puts on the whitelist.
+    top_pairs: int = 50
+    # Bases that are not crypto: fiat and tokenised gold. USD stablecoins are detected from their price.
+    excluded_bases: set[str] = {"EUR", "GBP", "AUD", "CAD", "CHF", "JPY", "EURC", "EURQ", "EURR", "EUROP",
+                                "PAXG", "XAUT"}
     log_level: str = "INFO"
 
 

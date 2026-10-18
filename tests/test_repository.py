@@ -99,3 +99,22 @@ def test_rejects_implausible_candle_time(session, pair_id):
 
 
 # The reporting layer (liquidity filter, UTC conversion, gaps) is tested by dbt unit tests in dbt/models/marts.
+
+
+def test_tracked_pairs_drive_default_sync_targets_and_prune(session, pair_id):
+    repo.add_missing_pairs(session, ["TESTKEEPUSD"])
+    repo.set_tracked_pairs(session, ["TESTKEEPUSD", "TESTNEWUSD"])  # TESTNEWUSD is added on the way
+    assert repo.tracked_symbols(session) == {"TESTKEEPUSD", "TESTNEWUSD"}
+    assert set(repo.pair_ids(session)) == {"TESTKEEPUSD", "TESTNEWUSD"}
+    assert "TESTPAIRUSD" in repo.pair_ids(session, ["TESTPAIRUSD"])  # explicit symbols ignore the whitelist
+
+    repo.upsert_candles(session, pair_id, TF, [candle(0), candle(1)])
+    assert ("TESTPAIRUSD", 2) in repo.untracked_pairs(session)
+    assert repo.delete_untracked_pairs(session) >= 2
+    assert set(repo.pair_ids(session, ["TESTPAIRUSD", "TESTKEEPUSD"])) == {"TESTKEEPUSD"}
+
+
+def test_refuses_to_untrack_everything(session):
+    with pytest.raises(ValueError):
+        repo.set_tracked_pairs(session, [])
+

@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Numeric,
     SmallInteger,
     String,
+    false,
 )
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -25,6 +27,8 @@ class Pair(Base):
 
     pair_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     symbol: Mapped[str] = mapped_column(String(30), unique=True)
+    # On the whitelist of most traded pairs: `ohlc sync` fetches these, the report shows only these.
+    tracked: Mapped[bool] = mapped_column(Boolean, server_default=false())
 
 
 class TimeframeRow(Base):

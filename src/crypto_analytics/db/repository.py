@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import batched
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -27,10 +27,38 @@ def add_missing_pairs(session: Session, symbols: Iterable[str]) -> list[str]:
 
 
 def pair_ids(session: Session, symbols: Sequence[str] | None = None) -> dict[str, int]:
+    """Ids of the given pairs, or of all tracked pairs."""
     stmt = select(Pair.symbol, Pair.pair_id).order_by(Pair.symbol)
-    if symbols:
-        stmt = stmt.where(Pair.symbol.in_(symbols))
+    stmt = stmt.where(Pair.symbol.in_(symbols)) if symbols else stmt.where(Pair.tracked)
     return {symbol: pair_id for symbol, pair_id in session.execute(stmt)}
+
+
+def tracked_symbols(session: Session) -> set[str]:
+    return set(session.scalars(select(Pair.symbol).where(Pair.tracked)))
+
+
+def set_tracked_pairs(session: Session, symbols: Sequence[str]) -> None:
+    """Make `symbols` exactly the tracked pairs, adding any that are not in the table yet."""
+    if not symbols:
+        raise ValueError("Refusing to untrack every pair")
+    add_missing_pairs(session, symbols)
+    session.execute(update(Pair).values(tracked=Pair.symbol.in_(symbols)))
+
+
+def untracked_pairs(session: Session) -> list[tuple[str, int]]:
+    """Pairs off the whitelist with their number of stored candles, most data first."""
+    candles = func.count(OhlcCandle.pair_id)
+    stmt = (select(Pair.symbol, candles).outerjoin(OhlcCandle, OhlcCandle.pair_id == Pair.pair_id)
+            .where(~Pair.tracked).group_by(Pair.symbol).order_by(candles.desc(), Pair.symbol))
+    return [(symbol, count) for symbol, count in session.execute(stmt)]
+
+
+def delete_untracked_pairs(session: Session) -> int:
+    """Delete pairs off the whitelist together with their candles; returns the candles deleted."""
+    untracked = select(Pair.pair_id).where(~Pair.tracked)
+    deleted = session.execute(delete(OhlcCandle).where(OhlcCandle.pair_id.in_(untracked))).rowcount
+    session.execute(delete(Pair).where(~Pair.tracked))
+    return deleted
 
 
 def latest_candle_time(session: Session, pair_id: int, timeframe: Timeframe) -> datetime | None:

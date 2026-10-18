@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from crypto_analytics.config import get_settings, postgres_env
 from crypto_analytics.db import repository as repo
@@ -27,6 +30,8 @@ TimeframeOpt = Annotated[str, typer.Option("--timeframe", "-t", help="Candle int
 
 ROOT = Path(__file__).resolve().parents[2]
 DBT_DIR = ROOT / "dbt"
+# Logs and progress bars share one console, so log lines print above a running bar instead of through it.
+console = Console(stderr=True)
 WHITELIST = ROOT / "tracked_pairs.txt"
 
 
@@ -37,7 +42,8 @@ def _date(value: str | None) -> datetime | None:
 @app.callback()
 def main(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) -> None:
     level = logging.DEBUG if verbose else get_settings().log_level
-    logging.basicConfig(level=level, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+    logging.basicConfig(level=level, format="%(name)s: %(message)s", datefmt="%H:%M:%S",
+                        handlers=[RichHandler(console=console, show_path=False)])
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
@@ -105,17 +111,41 @@ def ohlc_sync(
 
 @app.command()
 def backfill(
-    symbol: str,
-    since: Annotated[str | None, typer.Option(help="Start date YYYY-MM-DD (default: resume).")] = None,
+    symbols: Annotated[list[str] | None, typer.Argument(help="Pairs to backfill (default: tracked pairs).")] = None,
+    since: Annotated[str | None, typer.Option(help="Start date YYYY-MM-DD (default: first large gap).")] = None,
     until: Annotated[str | None, typer.Option(help="End date YYYY-MM-DD (default: now).")] = None,
+    overwrite: Annotated[bool, typer.Option(help="Re-fetch candles that are already stored.")] = False,
+    min_gap: Annotated[int, typer.Option(help="Skip holes shorter than N candles.")] = 4,
     timeframe: TimeframeOpt = "15m",
 ) -> None:
-    """Rebuild candles from raw trades – complete history, including VWAP. Ctrl+C is safe."""
-    with KrakenClient(get_settings()) as client:
-        result = backfill_service.backfill(client, session_factory(), symbol, Timeframe.from_code(timeframe),
-                                           _date(since), _date(until))
-    typer.echo(f"{symbol}: {result.trades} trades -> {result.candles_written} candles written "
-               f"(up to {result.last_candle}).")
+    """Rebuild candles from raw trades – complete history, including VWAP. Ctrl+C is safe.
+
+    Only missing candles are fetched unless --overwrite. Without --since, each pair's first gap too large
+    for `ohlc sync` is filled (run again for the next)."""
+    sessions = session_factory()
+    if not symbols:
+        with sessions() as session:
+            symbols = list(repo.pair_ids(session))
+    columns = (TextColumn("{task.description:<12}"), BarColumn(), TaskProgressColumn(),
+               TextColumn("{task.fields[reached]}  {task.fields[trades]:>10,} trades"),
+               TimeElapsedColumn(), TextColumn("left"), TimeRemainingColumn())
+    with KrakenClient(get_settings()) as client, Progress(*columns, console=console) as bar:
+        overall = bar.add_task("all pairs", total=len(symbols), reached="", trades=0) if len(symbols) > 1 else None
+        for symbol in symbols:
+            task = bar.add_task(symbol, total=None, reached="", trades=0)
+
+            def show(start: datetime, end: datetime, reached: datetime, trades: int, task=task) -> None:
+                # Progress is measured in time covered: trades arrive oldest first.
+                bar.update(task, total=(end - start).total_seconds(), completed=(reached - start).total_seconds(),
+                           reached=f"{reached.astimezone(UTC):%Y-%m-%d %H:%M}", trades=trades)
+
+            result = backfill_service.backfill(client, sessions, symbol, Timeframe.from_code(timeframe),
+                                               _date(since), _date(until), overwrite, min_gap, progress=show)
+            bar.remove_task(task)
+            bar.console.print(f"{symbol}: {result.trades:,} trades -> {result.candles_written:,} candles written "
+                              f"(up to {result.last_candle}).")
+            if overall is not None:
+                bar.advance(overall)
 
 
 @app.command()

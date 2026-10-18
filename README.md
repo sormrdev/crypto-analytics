@@ -22,7 +22,6 @@ pytest) · GitHub Actions (CI and scheduled loads) · basic inference (t-statist
 
 ## Key findings
 
-All numbers are reproducible with [`analysis/findings.sql`](analysis/findings.sql), which reads the same view as the report.
 Times are UTC. XBT (Bitcoin) data runs from 1 Jan to 16 Aug 2026; the cross-pair figures cover 7 Jun – 16 Aug 2026.
 
 1. **Turnover is extremely concentrated.** 10 of 323 pairs account for 84.7% of the $27.0B USD turnover,
@@ -48,7 +47,7 @@ predictable by session, which matters for sizing, stops and leverage. The direct
 ### Data quality and caveats
 
 - **Collection gaps:** all pairs have holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`.
-  The findings use only gap-free windows (query 5 skips any entry without 24 hours of continuous data).
+  The findings use only gap-free windows (any entry without 24 hours of continuous data is skipped).
 - **Survivorship bias:** the report keeps only the 50 pairs that were most traded in the 30 days to 18 Oct 2026
   (and had at least $1M turnover in the 365-day window), so pairs that faded or died earlier are missing.
 - **Simulator assumptions:** isolated margin, 1% maintenance margin, no fees, funding or slippage. Prices are
@@ -131,7 +130,6 @@ src/crypto_analytics/
 migrations/              # Alembic revisions (raw tables)
 dbt/                     # dbt project: staging views, reporting marts, tests
 tests/                   # pytest
-analysis/findings.sql    # queries behind the Key findings
 scripts/copy_to_cloud.py # one-off: seed a hosted database with the top pairs
 powerbi/                 # Power BI project (PBIP)
 docs/img/                # report screenshots

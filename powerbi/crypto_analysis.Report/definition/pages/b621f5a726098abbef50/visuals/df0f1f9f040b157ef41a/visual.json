@@ -257,5 +257,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "d9a045c4cd81e387dac8",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "Gaps"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

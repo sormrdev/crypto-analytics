@@ -126,6 +126,27 @@ def find_gaps(session: Session, pair_id: int, timeframe: Timeframe, min_missing:
     return [Gap(after, before) for after, before in rows]
 
 
+def missing_ranges(session: Session, pair_id: int, timeframe: Timeframe, start: datetime, until: datetime,
+                   min_missing: int = 1) -> list[tuple[datetime, datetime]]:
+    """[first missing candle, next stored candle) for every run of at least `min_missing` absent candles
+    in [start, until), including before the first and after the last stored candle."""
+    rows = session.execute(text("""
+        WITH t AS (
+            SELECT candle_time FROM ohlc_candle
+            WHERE pair_id = :pair_id AND timeframe_id = :tf AND candle_time >= :start AND candle_time < :until
+            UNION ALL SELECT CAST(:start AS timestamptz) - make_interval(secs => :step)
+            UNION ALL SELECT CAST(:until AS timestamptz)
+        )
+        SELECT prev_time + make_interval(secs => :step), candle_time FROM (
+            SELECT candle_time, lag(candle_time) OVER (ORDER BY candle_time) AS prev_time FROM t
+        ) gaps
+        WHERE candle_time - prev_time > make_interval(secs => :step * (:min_missing + 1) - 1)
+        ORDER BY candle_time
+    """), {"pair_id": pair_id, "tf": timeframe.db_id, "step": timeframe.seconds, "min_missing": min_missing,
+           "start": start, "until": until})
+    return [(first, before) for first, before in rows]
+
+
 @dataclass(frozen=True)
 class GapSummary:
     symbol: str

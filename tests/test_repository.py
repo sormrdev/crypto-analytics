@@ -118,3 +118,11 @@ def test_refuses_to_untrack_everything(session):
     with pytest.raises(ValueError):
         repo.set_tracked_pairs(session, [])
 
+
+def test_missing_ranges_cover_holes_and_both_ends(session, pair_id):
+    repo.upsert_candles(session, pair_id, TF, [candle(i) for i in (2, 3, 4, 9, 10)])
+    ranges = repo.missing_ranges(session, pair_id, TF, T0, T0 + 14 * TF.delta, min_missing=2)
+    assert ranges == [(T0, T0 + 2 * TF.delta),                       # before the first stored candle
+                      (T0 + 5 * TF.delta, T0 + 9 * TF.delta),        # the hole
+                      (T0 + 11 * TF.delta, T0 + 14 * TF.delta)]      # after the last one
+    assert repo.missing_ranges(session, pair_id, TF, T0 + 2 * TF.delta, T0 + 5 * TF.delta) == []

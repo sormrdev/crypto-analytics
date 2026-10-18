@@ -56,7 +56,7 @@
                 "Version": 2,
                 "From": [
                   {
-                    "Name": "p",
+                    "Name": "k",
                     "Entity": "kraken_spot_pair",
                     "Type": 0
                   }
@@ -70,7 +70,7 @@
                             "Column": {
                               "Expression": {
                                 "SourceRef": {
-                                  "Source": "p"
+                                  "Source": "k"
                                 }
                               },
                               "Property": "symbol"
@@ -245,5 +245,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "ab753be57138ee44fa9e",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "kraken_spot_pair"
+              }
+            },
+            "Property": "symbol"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

@@ -5420,6 +5420,16 @@ cultureInfo en-US
 			            },
 			            "Weight": 0.466
 			          }
+			        },
+			        {
+			          "Pair": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
 			        }
 			      ]
 			    },
@@ -7559,6 +7569,216 @@ cultureInfo en-US
 			      "Terms": [
 			        {
 			          "Entry day (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "kraken_spot_pair.last_candle_utc": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "kraken_spot_pair",
+			          "ConceptualProperty": "Last Candle (UTC)"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Last candle (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.gap_start_utc": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "gap_start_utc"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Last candle before (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.gap_end_utc": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "gap_end_utc"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Next candle (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.missing_candles": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "missing_candles"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Missing candles": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.missing_hours": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "missing_hours"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Hours": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.is_open": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "is_open"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Still open": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.missing_candles1": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "Missing Candles"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Missing candles": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "data_gaps.gaps": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "data_gaps",
+			          "ConceptualProperty": "Gaps"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Gaps": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "daily_coverage.coverage_": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "daily_coverage",
+			          "ConceptualProperty": "Coverage %"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Coverage": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "daily_coverage.days_without_data": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "daily_coverage",
+			          "ConceptualProperty": "Days Without Data"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Days without data": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",

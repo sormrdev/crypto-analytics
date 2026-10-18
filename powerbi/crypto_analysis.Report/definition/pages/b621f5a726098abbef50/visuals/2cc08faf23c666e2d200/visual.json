@@ -249,5 +249,93 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "faa48167dbe6dfb29a70",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "kraken_spot_pair"
+              }
+            },
+            "Property": "symbol"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "45ca06e0deb7edc86244",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "gap_start_utc"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "4fc2226cb5989b492ebb",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "gap_end_utc"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "6eae6a22e55c52f9f3c1",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "missing_candles"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "9041751002eb634a21b2",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "missing_hours"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "734d0431f28dfeed7817",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "data_gaps"
+              }
+            },
+            "Property": "is_open"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

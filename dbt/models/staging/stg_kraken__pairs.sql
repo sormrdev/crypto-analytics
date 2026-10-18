@@ -1,4 +1,5 @@
 select
     pair_id,
-    symbol
+    symbol,
+    tracked
 from {{ source('kraken', 'pair') }}

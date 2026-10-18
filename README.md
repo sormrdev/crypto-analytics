@@ -1,7 +1,7 @@
 # Crypto Analytics
 
-End-to-end analytics project on **Kraken crypto market data**: a Python pipeline loads 1.5M 15-minute candles
-for 323 USD pairs into **PostgreSQL** on a schedule, **dbt** models and tests the reporting layer, a **Power BI**
+End-to-end analytics project on **Kraken crypto market data**: a Python pipeline loads 15-minute candles
+for the 50 most traded USD crypto pairs into **PostgreSQL**, **dbt** models and tests the reporting layer, a **Power BI**
 report explores intraday patterns, simulates leveraged trades and monitors data quality, and **SQL** checks which
 of those patterns survive a statistical test.
 
@@ -12,7 +12,7 @@ downtrend, not a real effect. And the best intraday strategy found in Jan–Apr 
 
 **Skills shown:** SQL (window functions, CTEs, gaps and islands) · dbt (staging/marts, data and unit tests,
 source freshness) · Power BI (DAX, Power Query, star schema, PBIP in Git) · Python (httpx, SQLAlchemy, Typer,
-pytest) · GitHub Actions (CI and scheduled loads) · basic inference (t-statistics, train/test split).
+pytest) · GitHub Actions (CI and a scheduled sync workflow) · basic inference (t-statistics, train/test split).
 
 | Market overview | Position simulator |
 |---|---|
@@ -40,15 +40,17 @@ flowchart LR
     P & O & B --> DB[(PostgreSQL<br/>raw: pair · timeframe · ohlc_candle)]
     DB --> DBT[dbt<br/>staging views → reporting marts<br/>+ tests]
     DBT --> PBI[Power BI<br/>4 report pages]
-    GHA{{GitHub Actions<br/>every 4 hours}} -.-> O & DBT
+    GHA{{GitHub Actions<br/>every 4 hours, optional}} -.-> O & DBT
 ```
 
 ### Scheduled sync
 
-`.github/workflows/sync.yml` runs every 4 hours: migrations, `pairs sync`, `ohlc sync`, `dbt build`, and a dbt
-source-freshness check that fails the run (and emails you) when the newest candle is over 24 hours old. It reads
-the database URL from the `CRYPTO_DATABASE_URL` repository secret and the pairs to track
-from `tracked_pairs.txt`. `scripts/copy_to_cloud.py` seeds a hosted database with the top pairs by turnover.
+The project runs against a local database: `ohlc sync` keeps it current and `backfill` fills any pause longer
+than the 7.5 days Kraken's OHLC endpoint covers. For a hosted database, `.github/workflows/sync.yml` is ready to
+run every 4 hours: migrations, `pairs sync`, `ohlc sync`, `dbt build`, and a dbt source-freshness check that fails
+the run (and emails you) when the newest candle is over 24 hours old. It is off by default; to turn it on, add the
+database URL as the `CRYPTO_DATABASE_URL` repository secret and set the repository variable `SYNC_ENABLED` to
+`true`. `scripts/copy_to_cloud.py` seeds the hosted database with the top pairs by turnover.
 
 ### Which pairs are tracked
 
@@ -60,7 +62,7 @@ tokenised gold are excluded by name (`CRYPTO_EXCLUDED_BASES`); USD stablecoins a
 (within 2% of $1 and less than 1% daily range), so new ones need no list update.
 
 The list is fixed on purpose. Re-ranking on every run would make pairs near the cut-off drop out and come back,
-leaving holes in their history each time. The scheduled `pairs sync` only applies the file; `ohlc sync` and the
+leaving holes in their history each time. `pairs sync` only applies the file; `ohlc sync` and the
 dbt `pairs` mart use tracked pairs only, and `crypto pairs prune` deletes the rest.
 
 ### dbt reporting layer
@@ -89,7 +91,7 @@ and warns when a gap is too large for it to fill.
   re-running over a long window only downloads what is missing; `--overwrite` rebuilds everything. A progress
   bar shows how far it got and the time left.
 - **Data-quality checks** – `crypto gaps` ranks every pair by missing data (or lists one pair's holes with
-  the `backfill` command to fill them); dbt tests and freshness checks run on every scheduled load.
+  the `backfill` command to fill them); dbt tests and freshness checks run on every build.
 - **Schema migrations** with Alembic, **unit tests** (pytest, mocked HTTP), **ruff**, **GitHub Actions CI**.
 
 ## Project layout

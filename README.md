@@ -20,30 +20,6 @@ pytest) · GitHub Actions (CI and scheduled loads) · basic inference (t-statist
 | **Intraday strategy** | **Data quality** |
 | ![Intraday strategy](docs/img/intraday-strategy.png) | ![Data quality](docs/img/data-quality.png) |
 
-## Key findings
-
-Times are UTC. XBT (Bitcoin) data runs from 1 Jan to 16 Aug 2026; the cross-pair figures cover 7 Jun – 16 Aug 2026.
-
-1. **Turnover is extremely concentrated.** 10 of 323 pairs account for 84.7% of the $27.0B USD turnover,
-   and Bitcoin alone for 27.4%. Stablecoins, FX and tokenised gold (USDT, USDC, EUR, GBP, PAXG) make up 40.7%,
-   so a large share of "crypto" volume is really dollar conversion.
-2. **The US session drives the market.** From 13:00 to 18:00 UTC (21% of the day), XBT trades 35.6% of its daily
-   turnover. The average 15-minute move peaks at 0.235% at 14:00, right after the New York open (13:30), against 0.117% at 10:00.
-3. **The "cheapest hour" is mostly trend, not a pattern.** On the overview chart XBT trades above its daily average
-   in Asian hours (+0.11% at 01:00) and below it in the US evening (−0.10% at 18:00). But XBT fell 28% over the period
-   (−0.15% per day), which alone produces that shape. Tested per hour, no hour's mean return is significantly
-   different from zero (largest |t| = 1.87 across 24 hours, 227 days).
-4. **Liquidation risk jumps between 10x and 20x leverage.** For a 24-hour XBT position opened at any 15-minute candle,
-   2x and 5x were never liquidated. At 10x, 0.7% of longs were liquidated; at 20x, 8.9% (7.6% of shorts). At 20x, a 4% move
-   against the position is enough, and that happens regularly. SOL at 20x: about 13% in both directions.
-5. **The best intraday strategy is overfitted.** Of 276 "long from hour A to hour B" windows, the best on Jan–Apr
-   (19:00 → 23:00: +0.14% per day, 57% winning days) earned only +0.06% with 48% winning days on May–Aug (t = 0.78).
-   Even in-sample it was not significant (t = 1.53) once you account for choosing it from 276 candidates, and either
-   figure is below a typical round-trip fee on perpetual futures (~0.1%).
-
-**So what:** the time-of-day structure that holds up is about *risk*, not *direction*. Volatility and liquidity are
-predictable by session, which matters for sizing, stops and leverage. The direction of price over the day is not.
-
 ### Data quality and caveats
 
 - **Collection gaps:** all pairs have holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`.

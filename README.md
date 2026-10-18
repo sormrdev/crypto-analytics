@@ -8,7 +8,6 @@ of those patterns survive a statistical test.
 **Main results:** the US trading session carries over a third of Bitcoin's turnover and roughly double the
 volatility of the Asian morning. The "best time of day to buy" visible on the chart is mostly the market's
 downtrend, not a real effect. And the best intraday strategy found in Jan–Apr fell apart from May on.
-[Key findings ↓](#key-findings)
 
 **Skills shown:** SQL (window functions, CTEs, gaps and islands) · dbt (staging/marts, data and unit tests,
 source freshness) · Power BI (DAX, Power Query, star schema, PBIP in Git) · Python (httpx, SQLAlchemy, Typer,
@@ -22,8 +21,8 @@ pytest) · GitHub Actions (CI and a scheduled sync workflow) · basic inference 
 
 ### Data quality and caveats
 
-- **Collection gaps:** all pairs have holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`.
-  The findings use only gap-free windows (any entry without 24 hours of continuous data is skipped).
+- **Collection gaps:** pairs had holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`
+  and filled with `crypto backfill`; the Data quality page shows the coverage of every pair and day.
 - **Survivorship bias:** the report keeps only the 50 pairs that were most traded in the 30 days to 18 Oct 2026
   (and had at least $1M turnover in the 365-day window), so pairs that faded or died earlier are missing.
 - **Simulator assumptions:** isolated margin, 1% maintenance margin, no fees, funding or slippage. Prices are

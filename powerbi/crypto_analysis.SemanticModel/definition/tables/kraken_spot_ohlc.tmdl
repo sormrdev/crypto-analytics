@@ -1,0 +1,181 @@
+table kraken_spot_ohlc
+	lineageTag: 7c7c788e-fc54-47d3-85b6-d9b93346316e
+
+	column pair_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 4dc95eb8-c6a1-4f55-8088-d86eeff872e5
+		summarizeBy: none
+		sourceColumn: pair_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column timeframe_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: a01c9d48-d4ae-4779-94d2-98875692b7b1
+		summarizeBy: none
+		sourceColumn: timeframe_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Candle open time (UTC).
+	column candle_time
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:nn
+		lineageTag: 2f35950f-18ed-4513-94bb-eae81d95cc1a
+		summarizeBy: none
+		sourceColumn: candle_time
+
+		annotation SummarizationSetBy = Automatic
+
+	column open_price
+		dataType: double
+		formatString: #,0.########
+		lineageTag: f20b3c4c-3f67-4d2d-8c4b-a1de495478e6
+		summarizeBy: none
+		sourceColumn: open_price
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_price
+		dataType: double
+		formatString: #,0.########
+		lineageTag: 6804489d-61aa-48c8-8abf-0886bbf63f3b
+		summarizeBy: none
+		sourceColumn: high_price
+
+		annotation SummarizationSetBy = Automatic
+
+	column low_price
+		dataType: double
+		formatString: #,0.########
+		lineageTag: bbe1b35b-892b-405d-9068-edc8b7688cfc
+		summarizeBy: none
+		sourceColumn: low_price
+
+		annotation SummarizationSetBy = Automatic
+
+	column close_price
+		dataType: double
+		formatString: #,0.########
+		lineageTag: fbe6dccc-c9a1-47a4-bfd0-48f51553fd05
+		summarizeBy: none
+		sourceColumn: close_price
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Traded volume in base currency.
+	column volume
+		dataType: double
+		formatString: #,0.####
+		lineageTag: d57030e1-c3ec-472a-a6c7-73b566ee8da6
+		summarizeBy: sum
+		sourceColumn: volume
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Volume-weighted average price of the candle.
+	column vwap
+		dataType: double
+		formatString: #,0.########
+		lineageTag: bde1dbd1-dc0d-46b7-b779-39762bfb6951
+		summarizeBy: none
+		sourceColumn: vwap
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Kraken pair altname, e.g. XBTUSD.
+	column symbol
+		dataType: string
+		lineageTag: 53c35aa8-6b2f-4e54-8531-91780343c8f3
+		summarizeBy: none
+		sourceColumn: symbol
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Time of day of the candle (UTC), used to compare intraday patterns across days.
+	column '15 min buckets' =
+			
+			TIME(
+			    HOUR([candle_time]),
+			    FLOOR(MINUTE([candle_time]), 15),
+			    0
+			)
+		formatString: hh:nn
+		lineageTag: bedac43e-c3e8-4862-af53-06f8e2d310d3
+		summarizeBy: none
+
+		changedProperty = DataType
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	/// Calendar day of the candle (UTC).
+	column Date = DATE(YEAR([candle_time]), MONTH([candle_time]), DAY([candle_time]))
+		formatString: yyyy-mm-dd
+		lineageTag: 5545179f-a802-44c4-815d-53ee4d2b9753
+		summarizeBy: none
+
+		changedProperty = DataType
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// Average close price of the pair on that day; helper for Pct difference.
+	column 'Daily Average' =
+			
+			CALCULATE(
+			    AVERAGE([close_price]),
+			    ALLEXCEPT(
+			       'kraken_spot_ohlc',
+			        'kraken_spot_ohlc'[Date],
+			        'kraken_spot_ohlc'[pair_id]
+			    )
+			)
+		isHidden
+		formatString: 0.00000000
+		lineageTag: 37dbd253-a20c-4de1-af14-7aa0c03c8151
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Close price relative to the pair's daily average close: (close - daily avg) / daily avg.
+	column 'Pct difference' =
+			DIVIDE(
+			    [close_price]-[Daily Average],
+			    [Daily Average]
+			)
+		formatString: 0.00%
+		lineageTag: fe34b2e5-2b90-4a0e-875c-1f35756da6eb
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	partition kraken_spot_ohlc = m
+		mode: import
+		source =
+				// Source: reporting.candles_15m (PostgreSQL view, versioned as Alembic migration 0004 in the Python project).
+				// The view already applies the 365-day window, the 1M USD liquidity filter and converts times to UTC.
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    Candles = Source{[Schema = "reporting", Item = "candles_15m"]}[Data],
+				    Renamed = Table.RenameColumns(Candles, {{"candle_time_utc", "candle_time"}}),
+				    Typed = Table.TransformColumnTypes(Renamed, {
+				        {"pair_id", Int64.Type}, {"timeframe_id", Int64.Type}, {"candle_time", type datetime},
+				        {"open_price", type number}, {"high_price", type number}, {"low_price", type number},
+				        {"close_price", type number}, {"volume", type number}, {"vwap", type number},
+				        {"symbol", type text}})
+				in
+				    Typed
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

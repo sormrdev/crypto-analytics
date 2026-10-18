@@ -25,3 +25,5 @@ jobs:
       - run: uv run ruff check .
       - run: uv run alembic upgrade head
       - run: uv run pytest
+      # Unit tests, models and data tests on the (empty) CI database.
+      - run: uv run crypto dbt build

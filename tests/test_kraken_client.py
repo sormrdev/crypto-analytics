@@ -90,4 +90,17 @@ def test_usd_pairs_filters_quote_and_status():
         "OLDUSD": {"altname": "OLDUSD", "quote": "ZUSD", "status": "delisted"},
     }
     client, _ = make_client(lambda request: ok(result))
-    assert client.usd_pairs() == ["XBTUSD"]
+    assert client.usd_pairs() == {"XXBTZUSD": "XBTUSD"}
+
+
+def test_usd_pair_activity_joins_ticker_to_usd_pairs():
+    pairs = {"XXBTZUSD": {"altname": "XBTUSD", "quote": "ZUSD"}, "XETHZEUR": {"altname": "ETHEUR", "quote": "ZEUR"}}
+    ticker = {
+        "XXBTZUSD": {"v": ["1", "2.5"], "p": ["100", "80000"], "l": ["1", "79000"], "h": ["1", "81000"]},
+        "XETHZEUR": {"v": ["1", "9"], "p": ["1", "3000"], "l": ["1", "2900"], "h": ["1", "3100"]},
+    }
+    client, _ = make_client(lambda request: ok(pairs if request.url.path.endswith("/AssetPairs") else ticker))
+    [btc] = client.usd_pair_activity()
+    assert btc.symbol == "XBTUSD"
+    assert btc.turnover_usd == Decimal("200000")  # last-24h volume x last-24h VWAP
+    assert (btc.low, btc.high) == (Decimal("79000"), Decimal("81000"))

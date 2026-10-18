@@ -1,0 +1,91 @@
+table ExitSelection
+	lineageTag: 49c5cc23-3807-4e7c-8ca5-efb6308597b1
+
+	/// Close price of the selected exit candle (single pair only).
+	measure 'Exit Price' =
+			// Close of the last candle at or before the exit moment; blank if the exit lies beyond the loaded data.
+			VAR ExitT = [Exit Time Selection]
+			VAR LastLoaded = CALCULATE(MAX(kraken_spot_ohlc[candle_time]), REMOVEFILTERS(kraken_spot_ohlc[candle_time]))
+			VAR ExitCandle = CALCULATE(MAX(kraken_spot_ohlc[candle_time]), kraken_spot_ohlc[candle_time] <= ExitT + 1 / 1440)
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[symbol]) && NOT ISBLANK(ExitT) && ExitT <= LastLoaded + 1 / 96,
+			        CALCULATE(MIN(kraken_spot_ohlc[close_price]), kraken_spot_ohlc[candle_time] = ExitCandle)
+			    )
+		formatString: #,0.####
+		lineageTag: 0aa91066-8684-4046-b61a-217f46bf5f97
+
+	measure 'Exit Time Selection' =
+			// Exit moment = entry + holding period.
+			VAR EntryT = [Entry Time Selection]
+			RETURN IF(NOT ISBLANK(EntryT), EntryT + [Holding Hours Value] / 24)
+		formatString: General Date
+		isHidden
+		lineageTag: 88262334-316b-4792-ac7a-3417fa3ace8f
+
+	measure 'Exit Time 15 min' = SELECTEDVALUE(ExitSelection[exit_candle_15min])
+		formatString: General Date
+		isHidden
+		lineageTag: b8415fde-9dd6-4d19-a8ef-5733faccecf7
+
+	/// Close price at the selected exit time of day (averaged over the days in context).
+	measure 'Exit Price 15 min' =
+			VAR ExitT = [Exit Time 15 min]
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[symbol]) && NOT ISBLANK(ExitT),
+			        CALCULATE(AVERAGE(kraken_spot_ohlc[close_price]), kraken_spot_ohlc[15 min buckets] = ExitT)
+			    )
+		formatString: #,0.####
+		lineageTag: 3d26ef42-a87b-46ec-8ec1-28f0e911b3d7
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Exit moment (UTC) derived from entry + holding period, as text for a card.
+	measure 'Exit Time Label' =
+			VAR ExitT = [Exit Time Selection]
+			RETURN IF(NOT ISBLANK(ExitT), FORMAT(ExitT, "yyyy-mm-dd") & UNICHAR(10) & FORMAT(ExitT, "hh:nn"))  // date and time on separate lines
+		lineageTag: 89392cec-e99c-4c81-8a3d-826db275af45
+
+	column exit_candle_time
+		formatString: General Date
+		lineageTag: 1f5c80c5-8fdd-4cc1-9251-7f2ebe5e9772
+		summarizeBy: none
+		sourceColumn: kraken_spot_ohlc[candle_time]
+
+		annotation SummarizationSetBy = Automatic
+
+	column exit_candle_date = DATE(YEAR(ExitSelection[exit_candle_time]), MONTH(ExitSelection[exit_candle_time]), DAY(ExitSelection[exit_candle_time]))
+		formatString: Long Date
+		lineageTag: 5df9421a-c039-47db-8000-9cfb76f47009
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column exit_candle_15min =
+			TIME(
+			    HOUR([exit_candle_time]),
+			    FLOOR(MINUTE([exit_candle_time]), 15),
+			    0
+			)
+		formatString: Long Time
+		lineageTag: 13e3d920-32ac-4a46-a407-28615907152e
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	partition ExitSelection = calculated
+		mode: import
+		source =
+				
+				SUMMARIZE(
+				    kraken_spot_ohlc,
+				    kraken_spot_ohlc[candle_time]
+				)
+
+	annotation PBI_Id = df367bbc885a40ef9cc6ca3729e83a50
+

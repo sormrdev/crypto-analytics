@@ -1,0 +1,200 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 409,
+        "y": 75
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 1007.5463905959896,
+            "y": 65.014094181878022
+          },
+          "nodeIndex": "kraken_spot_ohlc",
+          "nodeLineageTag": "7c7c788e-fc54-47d3-85b6-d9b93346316e",
+          "size": {
+            "height": 296,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1470.7232788307197,
+            "y": 546.3390868143124
+          },
+          "nodeIndex": "kraken_spot_pair",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 902.36163941535983,
+            "y": 502.07920335921938
+          },
+          "nodeIndex": "kraken_spot_timeframe",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 553.01409418187791
+          },
+          "nodeIndex": "EntrySelection",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1124.5513558181669,
+            "y": 550.48920008014193
+          },
+          "nodeIndex": "ExitSelection",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1472.5513558181669,
+            "y": 257.02084719863183
+          },
+          "nodeIndex": "Leverage",
+          "nodeLineageTag": "88aee53e-de73-443e-a84f-22a006e0b4e4",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 569.55135581816694,
+            "y": 397.49932960527252
+          },
+          "nodeIndex": "Invested amount",
+          "nodeLineageTag": "8c97a179-e3f7-49d2-936a-c685d2e9b335",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1035.5513558181669,
+            "y": 625.71705321523382
+          },
+          "nodeIndex": "Simulator",
+          "nodeLineageTag": "fd6d6873-21dc-4afb-81ca-5bec586188ba",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 679.55135581816694,
+            "y": 610.78351675258818
+          },
+          "nodeIndex": "Intraday Strategy",
+          "nodeLineageTag": "18770bde-432c-4b22-8779-46e4f43b37c3",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1213.5513558181669,
+            "y": 45.643333936207284
+          },
+          "nodeIndex": "MarketHours",
+          "nodeLineageTag": "687b0337-a87f-4ef0-a7a6-defbd6697219",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 596.36163941535983,
+            "y": 49.0720281393759
+          },
+          "nodeIndex": "Calendar",
+          "nodeLineageTag": "88bfd167-c707-47d6-a6d8-84043660247d",
+          "size": {
+            "height": 248,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 348.36163941535983,
+            "y": 342.97764982376981
+          },
+          "nodeIndex": "Holding Hours",
+          "nodeLineageTag": "a1efcbcc-5969-4249-b9ff-bab1b76cb861",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1408.1897164028071,
+            "y": 293.2513042849157
+          },
+          "nodeIndex": "daily_coverage",
+          "nodeLineageTag": "19e89495-7f6c-459c-ad6f-732e227ced9d",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1692.1897164028071,
+            "y": 257.2513042849157
+          },
+          "nodeIndex": "data_gaps",
+          "nodeLineageTag": "a5248095-3618-4f8c-8c65-c6b0caa8fd32",
+          "size": {
+            "height": 296,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}

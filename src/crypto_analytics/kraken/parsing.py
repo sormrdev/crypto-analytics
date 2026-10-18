@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from crypto_analytics.domain import Candle, Trade
+from crypto_analytics.domain import Candle, PairActivity, Trade
 
 
 def extract_series(result: dict[str, Any]) -> list[list[Any]]:
@@ -46,10 +46,27 @@ def parse_trades(result: dict[str, Any]) -> list[Trade]:
     ]
 
 
-def parse_usd_pairs(result: dict[str, Any], quote: str) -> list[str]:
-    """Altnames (e.g. XBTUSD) of tradable pairs quoted in `quote`."""
-    return sorted(
-        info["altname"]
-        for info in result.values()
+def parse_usd_pairs(result: dict[str, Any], quote: str) -> dict[str, str]:
+    """Kraken pair name (e.g. XXBTZUSD) -> altname (XBTUSD) of tradable pairs quoted in `quote`."""
+    return {
+        name: info["altname"]
+        for name, info in sorted(result.items(), key=lambda item: item[1]["altname"])
         if info.get("quote") == quote and info.get("status", "online") == "online"
-    )
+    }
+
+
+def parse_ticker(result: dict[str, Any], names: dict[str, str]) -> list[PairActivity]:
+    """24-hour activity of the pairs in `names` (Kraken pair name -> altname); the Ticker endpoint
+    returns every pair on the exchange at once."""
+    # Each field holds [today, last 24 hours]: v = volume in base units, p = VWAP, l/h = low/high.
+    return [
+        PairActivity(
+            symbol=names[name],
+            turnover_usd=Decimal(row["v"][1]) * Decimal(row["p"][1]),
+            vwap=Decimal(row["p"][1]),
+            low=Decimal(row["l"][1]),
+            high=Decimal(row["h"][1]),
+        )
+        for name, row in result.items()
+        if name in names
+    ]

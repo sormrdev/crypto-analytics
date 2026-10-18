@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import batched
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -27,10 +27,38 @@ def add_missing_pairs(session: Session, symbols: Iterable[str]) -> list[str]:
 
 
 def pair_ids(session: Session, symbols: Sequence[str] | None = None) -> dict[str, int]:
+    """Ids of the given pairs, or of all tracked pairs."""
     stmt = select(Pair.symbol, Pair.pair_id).order_by(Pair.symbol)
-    if symbols:
-        stmt = stmt.where(Pair.symbol.in_(symbols))
+    stmt = stmt.where(Pair.symbol.in_(symbols)) if symbols else stmt.where(Pair.tracked)
     return {symbol: pair_id for symbol, pair_id in session.execute(stmt)}
+
+
+def tracked_symbols(session: Session) -> set[str]:
+    return set(session.scalars(select(Pair.symbol).where(Pair.tracked)))
+
+
+def set_tracked_pairs(session: Session, symbols: Sequence[str]) -> None:
+    """Make `symbols` exactly the tracked pairs, adding any that are not in the table yet."""
+    if not symbols:
+        raise ValueError("Refusing to untrack every pair")
+    add_missing_pairs(session, symbols)
+    session.execute(update(Pair).values(tracked=Pair.symbol.in_(symbols)))
+
+
+def untracked_pairs(session: Session) -> list[tuple[str, int]]:
+    """Pairs off the whitelist with their number of stored candles, most data first."""
+    candles = func.count(OhlcCandle.pair_id)
+    stmt = (select(Pair.symbol, candles).outerjoin(OhlcCandle, OhlcCandle.pair_id == Pair.pair_id)
+            .where(~Pair.tracked).group_by(Pair.symbol).order_by(candles.desc(), Pair.symbol))
+    return [(symbol, count) for symbol, count in session.execute(stmt)]
+
+
+def delete_untracked_pairs(session: Session) -> int:
+    """Delete pairs off the whitelist together with their candles; returns the candles deleted."""
+    untracked = select(Pair.pair_id).where(~Pair.tracked)
+    deleted = session.execute(delete(OhlcCandle).where(OhlcCandle.pair_id.in_(untracked))).rowcount
+    session.execute(delete(Pair).where(~Pair.tracked))
+    return deleted
 
 
 def latest_candle_time(session: Session, pair_id: int, timeframe: Timeframe) -> datetime | None:
@@ -80,15 +108,79 @@ class Gap:
         return self.before - self.after
 
 
-def find_gaps(session: Session, pair_id: int, timeframe: Timeframe, min_missing: int = 1) -> list[Gap]:
+def find_gaps(session: Session, pair_id: int, timeframe: Timeframe, min_missing: int = 1,
+              since: datetime | None = None) -> list[Gap]:
     """Holes of at least `min_missing` consecutive candles. Illiquid pairs legitimately have
     empty intervals (no trades), so treat small gaps as information rather than errors."""
     rows = session.execute(text("""
         SELECT prev_time, candle_time FROM (
             SELECT candle_time, lag(candle_time) OVER (ORDER BY candle_time) AS prev_time
-            FROM ohlc_candle WHERE pair_id = :pair_id AND timeframe_id = :tf
+            FROM ohlc_candle
+            WHERE pair_id = :pair_id AND timeframe_id = :tf
+              AND (CAST(:since AS timestamptz) IS NULL OR candle_time >= :since)
         ) t
         WHERE candle_time - prev_time > make_interval(secs => :step * (:min_missing + 1) - 1)
         ORDER BY candle_time
-    """), {"pair_id": pair_id, "tf": timeframe.db_id, "step": timeframe.seconds, "min_missing": min_missing})
+    """), {"pair_id": pair_id, "tf": timeframe.db_id, "step": timeframe.seconds, "min_missing": min_missing,
+           "since": since})
     return [Gap(after, before) for after, before in rows]
+
+
+def missing_ranges(session: Session, pair_id: int, timeframe: Timeframe, start: datetime, until: datetime,
+                   min_missing: int = 1) -> list[tuple[datetime, datetime]]:
+    """[first missing candle, next stored candle) for every run of at least `min_missing` absent candles
+    in [start, until), including before the first and after the last stored candle."""
+    rows = session.execute(text("""
+        WITH t AS (
+            SELECT candle_time FROM ohlc_candle
+            WHERE pair_id = :pair_id AND timeframe_id = :tf AND candle_time >= :start AND candle_time < :until
+            UNION ALL SELECT CAST(:start AS timestamptz) - make_interval(secs => :step)
+            UNION ALL SELECT CAST(:until AS timestamptz)
+        )
+        SELECT prev_time + make_interval(secs => :step), candle_time FROM (
+            SELECT candle_time, lag(candle_time) OVER (ORDER BY candle_time) AS prev_time FROM t
+        ) gaps
+        WHERE candle_time - prev_time > make_interval(secs => :step * (:min_missing + 1) - 1)
+        ORDER BY candle_time
+    """), {"pair_id": pair_id, "tf": timeframe.db_id, "step": timeframe.seconds, "min_missing": min_missing,
+           "start": start, "until": until})
+    return [(first, before) for first, before in rows]
+
+
+@dataclass(frozen=True)
+class GapSummary:
+    symbol: str
+    gaps: int
+    missing_candles: int
+    largest_gap: int  # candles missing in the biggest hole
+    last_candle: datetime  # a stale pair has no hole yet, but an old last candle
+
+
+def gap_summary(session: Session, timeframe: Timeframe, min_missing: int = 1,
+                since: datetime | None = None) -> list[GapSummary]:
+    """Every pair with candles, most missing data (holes of at least `min_missing` candles) first."""
+    rows = session.execute(text("""
+        WITH c AS (
+            SELECT pair_id, candle_time,
+                   lag(candle_time) OVER (PARTITION BY pair_id ORDER BY candle_time) AS prev_time
+            FROM ohlc_candle
+            WHERE timeframe_id = :tf AND (CAST(:since AS timestamptz) IS NULL OR candle_time >= :since)
+        ),
+        holes AS (
+            SELECT pair_id, extract(epoch FROM candle_time - prev_time)::bigint / :step - 1 AS missing
+            FROM c
+            WHERE candle_time - prev_time > make_interval(secs => :step * (:min_missing + 1) - 1)
+        ),
+        latest AS (
+            SELECT pair_id, max(candle_time) AS last_candle FROM c GROUP BY pair_id
+        )
+        SELECT p.symbol, count(h.missing), coalesce(sum(h.missing), 0), coalesce(max(h.missing), 0),
+               l.last_candle
+        FROM latest l
+        JOIN pair p USING (pair_id)
+        LEFT JOIN holes h USING (pair_id)
+        GROUP BY p.symbol, l.last_candle
+        ORDER BY 3 DESC, p.symbol
+    """), {"tf": timeframe.db_id, "step": timeframe.seconds, "min_missing": min_missing, "since": since})
+    return [GapSummary(symbol, gaps, int(missing), int(largest), last)
+            for symbol, gaps, missing, largest, last in rows]

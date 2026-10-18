@@ -1,0 +1,28 @@
+relationship 545839cb-fc94-4864-ad3f-a358ec72d6af
+	fromColumn: kraken_spot_ohlc.pair_id
+	toColumn: kraken_spot_pair.pair_id
+
+	annotation PBI_IsFromSource = FS
+
+relationship 5b8c09f4-bcdc-40aa-b2b7-b4474b49f5a2
+	fromColumn: kraken_spot_ohlc.timeframe_id
+	toColumn: kraken_spot_timeframe.timeframe_id
+
+	annotation PBI_IsFromSource = FS
+
+relationship kraken_spot_ohlc_Date_Calendar_Date
+	fromColumn: kraken_spot_ohlc.Date
+	toColumn: Calendar.Date
+
+relationship e45106d2-8ca8-43a0-a003-7d94f07d79f6
+	fromColumn: data_gaps.pair_id
+	toColumn: kraken_spot_pair.pair_id
+
+relationship 15e8bee6-cdcf-4174-a822-e5a259fe67fb
+	fromColumn: daily_coverage.pair_id
+	toColumn: kraken_spot_pair.pair_id
+
+relationship 6e5f66d2-e81b-464d-a0a1-69ab5041cda2
+	fromColumn: daily_coverage.day
+	toColumn: Calendar.Date
+

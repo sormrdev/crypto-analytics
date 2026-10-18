@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "crypto_analysis"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "a6da2d32-52b9-47bc-96d6-0c95ae48c0d9"
+  }
+}

@@ -20,3 +20,12 @@ powerbi/**/.pbi/localSettings.json
 
 # Pre-refactor code kept locally for reference
 _legacy/
+
+# dbt build output
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+
+# Local database dumps
+backups/

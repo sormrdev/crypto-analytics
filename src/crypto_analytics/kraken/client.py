@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 
 from crypto_analytics.config import Settings
-from crypto_analytics.domain import Candle, Timeframe, Trade
+from crypto_analytics.domain import Candle, PairActivity, Timeframe, Trade
 
 from . import parsing
 
@@ -37,8 +37,13 @@ class KrakenClient:
 
     # --- endpoints -------------------------------------------------------------
 
-    def usd_pairs(self) -> list[str]:
+    def usd_pairs(self) -> dict[str, str]:
+        """Kraken pair name (XXBTZUSD) -> altname (XBTUSD) of every tradable USD pair."""
         return parsing.parse_usd_pairs(self._get("/AssetPairs"), self._settings.quote_asset)
+
+    def usd_pair_activity(self) -> list[PairActivity]:
+        """Last-24h turnover of every USD pair - two calls, however many pairs Kraken lists."""
+        return parsing.parse_ticker(self._get("/Ticker"), self.usd_pairs())
 
     def ohlc(self, pair: str, timeframe: Timeframe, since: datetime | None = None) -> list[Candle]:
         """Up to the 720 most recent candles. The last one is still forming."""

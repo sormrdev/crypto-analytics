@@ -1,0 +1,35 @@
+name: Scheduled sync
+
+# Keeps the cloud database current: Kraken's OHLC endpoint only serves the last 720 candles
+# (7.5 days of 15m data), so any pause longer than that leaves a hole only a backfill can fill.
+on:
+  schedule:
+    - cron: "17 */4 * * *"   # every 4 hours at minute 17 (UTC); off the hour, when GitHub is busiest
+  workflow_dispatch:          # "Run workflow" button for a manual run
+
+# Never run two syncs at once; a late run waits for the current one instead of being cancelled.
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CRYPTO_DATABASE_URL: ${{ secrets.CRYPTO_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - name: Migrate schema
+        run: uv run alembic upgrade head
+      - name: Apply the pair whitelist (tracked_pairs.txt)
+        run: uv run crypto pairs sync
+      - name: Fetch latest candles of tracked pairs
+        run: uv run crypto ohlc sync
+      - name: Build and test reporting tables
+        run: uv run crypto dbt build
+      - name: Check data freshness
+        # Fails the run (and GitHub emails you) when the newest candle is more than 24 hours old.
+        run: uv run crypto dbt source freshness

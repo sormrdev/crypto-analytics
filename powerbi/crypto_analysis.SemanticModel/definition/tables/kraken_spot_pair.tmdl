@@ -1,0 +1,66 @@
+/// Pairs the report covers (dbt model reporting.pairs): enough turnover in the reporting window.
+table kraken_spot_pair
+	lineageTag: bec7dede-5de4-4e7b-8711-ac251ef7bcf7
+
+	/// Newest stored candle of the pair (UTC).
+	measure 'Last Candle (UTC)' = MAX(kraken_spot_pair[last_candle_utc])
+		formatString: yyyy-mm-dd hh:nn
+		displayFolder: Data quality
+		lineageTag: 31f881b4-4022-4dfc-a81b-8d40c86c040e
+
+	/// Hours between the newest candle and now; the scheduled sync keeps this under about 4.
+	measure 'Hours Since Last Candle' = IF(NOT ISBLANK([Last Candle (UTC)]), (UTCNOW() - [Last Candle (UTC)]) * 24)
+		formatString: #,0.0
+		displayFolder: Data quality
+		lineageTag: 46af2564-a9e2-4311-ade0-87d4200c76bc
+
+	column pair_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 2de480d0-7b02-441a-87b8-fe9f00ffeacc
+		summarizeBy: none
+		sourceColumn: pair_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column symbol
+		dataType: string
+		lineageTag: 861c18e6-153e-411c-8e39-fcd3e065f186
+		summarizeBy: none
+		sourceColumn: symbol
+
+		annotation SummarizationSetBy = Automatic
+
+	column last_candle_utc
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-mm-dd hh:nn
+		lineageTag: 7242c3f3-b83e-432e-9de9-032a40104b0b
+		summarizeBy: none
+		sourceColumn: last_candle_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	/// USD turnover in the reporting window.
+	column turnover_usd
+		dataType: double
+		formatString: \$#,0
+		lineageTag: 25ec191a-ee70-4952-88ce-edbdeefdff6e
+		summarizeBy: sum
+		sourceColumn: turnover_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	partition kraken_spot_pair = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database(DatabaseServer, DatabaseName),
+				    Pairs = Source{[Schema = "reporting", Item = "pairs"]}[Data],
+				    Selected = Table.SelectColumns(Pairs, {"pair_id", "symbol", "last_candle_utc", "turnover_usd"}),
+				    Typed = Table.TransformColumnTypes(Selected, {
+				        {"pair_id", Int64.Type}, {"symbol", type text},
+				        {"last_candle_utc", type datetime}, {"turnover_usd", type number}})
+				in
+				    Typed
+

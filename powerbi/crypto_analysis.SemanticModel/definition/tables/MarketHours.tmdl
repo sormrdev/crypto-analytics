@@ -1,0 +1,69 @@
+table MarketHours
+	lineageTag: 687b0337-a87f-4ef0-a7a6-defbd6697219
+
+	/// Tokyo session open in UTC (chart times are UTC, no offset needed).
+	measure TokyoAdjusted = TIMEVALUE(CALCULATE(SELECTEDVALUE(MarketHours[OpenUTC]), MarketHours[Market] = "Tokyo"))
+		formatString: hh:nn
+		lineageTag: 0e66afef-e7a3-417d-9a82-68471ba0bd81
+
+	/// Hong Kong session open in UTC.
+	measure HongKongAdjusted = TIMEVALUE(CALCULATE(SELECTEDVALUE(MarketHours[OpenUTC]), MarketHours[Market] = "Hong Kong"))
+		formatString: hh:nn
+		lineageTag: 767cc289-10ef-4059-a29e-bfd02aa2e204
+
+	/// London session open in UTC (07:00 during UK summer time, 08:00 in winter).
+	measure LondonAdjusted = TIMEVALUE(CALCULATE(SELECTEDVALUE(MarketHours[OpenUTC]), MarketHours[Market] = "London"))
+		formatString: hh:nn
+		lineageTag: c225b5ca-650c-45ad-833b-bbd8c90708e0
+
+	/// New York session open in UTC (13:30 during US daylight time, 14:30 in winter).
+	measure NewYorkAdjusted = TIMEVALUE(CALCULATE(SELECTEDVALUE(MarketHours[OpenUTC]), MarketHours[Market] = "New York"))
+		formatString: hh:nn
+		lineageTag: af3439a8-6239-4d37-8f9d-6bdfca2f6a28
+
+	column Market
+		lineageTag: e686b950-22c7-429f-97b6-d0b50964f8c3
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Market]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Country
+		lineageTag: 45db8fa5-2363-4b74-a23b-3cf3773ae57d
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Country]
+
+		annotation SummarizationSetBy = Automatic
+
+	column OpenUTC
+		dataType: dateTime
+		formatString: Long Time
+		lineageTag: f5df66cd-0903-4fb1-ad5e-7c1d0e34ea28
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [OpenUTC]
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	partition MarketHours = calculated
+		mode: import
+		source =
+				
+				DATATABLE(
+				    "Market", STRING,
+				    "Country", STRING,
+				    "OpenUTC", STRING,
+				    {
+				        {"Tokyo", "Japan", "00:00"},
+				        {"Hong Kong", "Hong Kong", "01:30"},
+				        {"London", "UK", "07:00"},
+				        {"New York", "USA", "13:30"}
+				    }
+				)
+
+	annotation PBI_Id = 4ed5e6f62eca4e2fa426e53f6e22d1a2
+

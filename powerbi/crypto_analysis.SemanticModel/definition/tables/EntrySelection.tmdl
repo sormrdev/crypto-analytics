@@ -1,0 +1,91 @@
+table EntrySelection
+	lineageTag: 40a565f4-a66a-4aa7-bbd9-51449388b1da
+
+	/// Open price of the selected entry candle (single pair only).
+	measure 'Entry Price' =
+			// Open price of the entry candle; blank unless exactly one pair is selected.
+			// Matched within +-1 minute because day + time-of-day is floating-point arithmetic.
+			VAR EntryT = [Entry Time Selection]
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[symbol]) && NOT ISBLANK(EntryT),
+			        CALCULATE(
+			            MIN(kraken_spot_ohlc[open_price]),
+			            kraken_spot_ohlc[candle_time] >= EntryT - 1 / 1440,
+			            kraken_spot_ohlc[candle_time] < EntryT + 1 / 1440
+			        )
+			    )
+		formatString: #,0.####
+		lineageTag: e2baed9e-4abb-4a88-b308-8b832cff6276
+
+	measure 'Entry Time Selection' =
+			// Entry moment = selected day + selected time of day (two separate dropdowns on the simulator page).
+			VAR EntryDay = SELECTEDVALUE(EntrySelection[entry_candle_date])
+			VAR EntryClock = SELECTEDVALUE(EntrySelection[entry_candle_15min])
+			RETURN
+			    IF(NOT ISBLANK(EntryDay) && NOT ISBLANK(EntryClock), EntryDay + EntryClock)
+		formatString: General Date
+		isHidden
+		lineageTag: cbf6456b-6268-4ed5-b3a3-941cbe813481
+
+	measure 'Entry Time 15 min' = SELECTEDVALUE(EntrySelection[entry_candle_15min])
+		formatString: General Date
+		isHidden
+		lineageTag: 57132004-4b93-48a2-ae25-bd26bcde4439
+
+	/// Open price at the selected entry time of day (averaged over the days in context).
+	measure 'Entry Price 15 min' =
+			// Average open price at the selected time of day over the days in context; blank unless one pair is selected.
+			VAR EntryT = [Entry Time 15 min]
+			RETURN
+			    IF(
+			        HASONEVALUE(kraken_spot_ohlc[symbol]) && NOT ISBLANK(EntryT),
+			        CALCULATE(AVERAGE(kraken_spot_ohlc[open_price]), kraken_spot_ohlc[15 min buckets] = EntryT)
+			    )
+		formatString: #,0.####
+		lineageTag: 0c61f63f-a883-4c13-ad00-c3bbadaf2b94
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column entry_candle_time
+		formatString: General Date
+		lineageTag: 144a58c8-d8f4-43b7-b9ff-bf536382762e
+		summarizeBy: none
+		sourceColumn: kraken_spot_ohlc[candle_time]
+
+		annotation SummarizationSetBy = Automatic
+
+	column entry_candle_date = DATE(YEAR(EntrySelection[entry_candle_time]), MONTH(EntrySelection[entry_candle_time]), DAY(EntrySelection[entry_candle_time]))
+		formatString: Long Date
+		lineageTag: 63d5ab5e-d475-4fd4-8b3e-1ca0568df486
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column entry_candle_15min =
+			TIME(
+			    HOUR([entry_candle_time]),
+			    FLOOR(MINUTE([entry_candle_time]), 15),
+			    0
+			)
+		formatString: Long Time
+		lineageTag: 6c89be6e-2bd8-44bd-a384-e7d393e7317b
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	partition EntrySelection = calculated
+		mode: import
+		source =
+				
+				SUMMARIZE(
+				    kraken_spot_ohlc,
+				    kraken_spot_ohlc[candle_time]
+				)
+
+	annotation PBI_Id = cc28db11efd7453db825a3f079e5c324
+

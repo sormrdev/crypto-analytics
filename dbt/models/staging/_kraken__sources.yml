@@ -1,0 +1,42 @@
+sources:
+  - name: kraken
+    schema: public
+    description: Raw tables written by the Python pipeline (`crypto` CLI). Alembic owns their schema.
+    tables:
+      - name: pair
+        description: One row per Kraken trading pair.
+        columns:
+          - name: pair_id
+            data_tests: [unique, not_null]
+          - name: symbol
+            data_tests: [unique, not_null]
+          - name: tracked
+            description: On the whitelist of most traded pairs, maintained by `crypto pairs sync`.
+            data_tests: [not_null]
+
+      - name: timeframe
+        description: Candle intervals, seeded by the baseline migration.
+        columns:
+          - name: timeframe_id
+            data_tests: [unique, not_null]
+          - name: code
+            data_tests: [unique, not_null]
+
+      - name: ohlc_candle
+        description: One candle per pair, timeframe and open time.
+        config:
+          # `dbt source freshness` warns when the newest candle is older than 6 hours, fails after 24.
+          loaded_at_field: candle_time
+          freshness:
+            warn_after: {count: 6, period: hour}
+            error_after: {count: 24, period: hour}
+        columns:
+          - name: pair_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('kraken', 'pair')
+                    field: pair_id
+          - name: candle_time
+            data_tests: [not_null]

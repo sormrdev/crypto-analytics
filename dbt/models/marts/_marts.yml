@@ -1,0 +1,120 @@
+models:
+  - name: pairs
+    description: Dimension of the pairs the report covers (tracked, enough turnover in the reporting window).
+    columns:
+      - name: pair_id
+        data_tests: [unique, not_null]
+      - name: symbol
+        description: Kraken pair altname, e.g. XBTUSD.
+        data_tests: [unique, not_null]
+      - name: turnover_usd
+        description: Sum of volume x close in the reporting window.
+      - name: turnover_rank
+        description: 1 = most traded pair in the reporting window.
+        data_tests: [not_null]
+
+  - name: candles_15m
+    description: >
+      Fact table of 15-minute candles for reported pairs inside the reporting window, times in naive UTC.
+      Power BI imports it as kraken_spot_ohlc.
+    columns:
+      - name: pair_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('pairs')
+                field: pair_id
+      - name: candle_time_utc
+        data_tests: [not_null]
+
+  - name: data_gaps
+    description: One row per hole of at least var('min_gap_candles') missing candles; is_open = data stops early.
+    columns:
+      - name: pair_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('pairs')
+                field: pair_id
+      - name: missing_candles
+        data_tests:
+          - in_range:
+              arguments:
+                min_value: "{{ var('min_gap_candles') }}"
+                max_value: 1000000
+
+  - name: daily_coverage
+    description: Candles present versus expected per pair and UTC day, including days with no data at all.
+    columns:
+      - name: coverage
+        data_tests:
+          - not_null
+          - in_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+unit_tests:
+  - name: stg_candles_converts_times_to_naive_utc
+    model: stg_kraken__candles
+    given:
+      - input: source('kraken', 'ohlc_candle')
+        rows:
+          - {pair_id: 1, timeframe_id: 3, candle_time: "2026-03-01 12:00:00+02", close_price: 100, volume: 2}
+      - input: ref('stg_kraken__timeframes')
+        rows:
+          - {timeframe_id: 3, timeframe_code: "15m"}
+    expect:
+      rows:
+        - {pair_id: 1, timeframe_code: "15m", candle_time_utc: "2026-03-01 10:00:00"}
+
+  - name: pairs_keeps_tracked_liquid_pairs_inside_the_window
+    model: pairs
+    overrides:
+      macros:
+        as_of: "'2026-08-01 00:00:00+00'::timestamptz"
+    given:
+      - input: ref('stg_kraken__candles')
+        rows:
+          # 2M USD turnover -> kept
+          - {pair_id: 1, timeframe_code: "15m", candle_time: "2026-07-01 00:00:00+00", candle_time_utc: "2026-07-01 00:00:00", turnover_usd: 2000000}
+          # 10 USD turnover -> too illiquid
+          - {pair_id: 2, timeframe_code: "15m", candle_time: "2026-07-01 00:00:00+00", candle_time_utc: "2026-07-01 00:00:00", turnover_usd: 10}
+          # liquid, but older than the 365-day window
+          - {pair_id: 3, timeframe_code: "15m", candle_time: "2025-01-01 00:00:00+00", candle_time_utc: "2025-01-01 00:00:00", turnover_usd: 5000000}
+          # liquid, but not tracked
+          - {pair_id: 4, timeframe_code: "15m", candle_time: "2026-07-01 00:00:00+00", candle_time_utc: "2026-07-01 00:00:00", turnover_usd: 9000000}
+          # 3M USD -> kept, ranked above BIGUSD
+          - {pair_id: 5, timeframe_code: "15m", candle_time: "2026-07-02 00:00:00+00", candle_time_utc: "2026-07-02 00:00:00", turnover_usd: 3000000}
+      - input: ref('stg_kraken__pairs')
+        rows:
+          - {pair_id: 1, symbol: "BIGUSD", tracked: true}
+          - {pair_id: 2, symbol: "TINYUSD", tracked: true}
+          - {pair_id: 3, symbol: "OLDUSD", tracked: true}
+          - {pair_id: 4, symbol: "UNTRACKEDUSD", tracked: false}
+          - {pair_id: 5, symbol: "HUGEUSD", tracked: true}
+    expect:
+      rows:
+        - {pair_id: 1, symbol: "BIGUSD", candles: 1, turnover_usd: 2000000, turnover_rank: 2}
+        - {pair_id: 5, symbol: "HUGEUSD", candles: 1, turnover_usd: 3000000, turnover_rank: 1}
+
+  - name: data_gaps_finds_holes_and_open_tails
+    model: data_gaps
+    overrides:
+      macros:
+        as_of: "'2026-01-01 03:00:00+00'::timestamptz"
+    given:
+      - input: ref('candles_15m')
+        rows:
+          # pair 1: 00:30-01:15 missing (4 candles), then silent from 01:30 until "now" (03:00)
+          - {pair_id: 1, candle_time_utc: "2026-01-01 00:00:00"}
+          - {pair_id: 1, candle_time_utc: "2026-01-01 00:15:00"}
+          - {pair_id: 1, candle_time_utc: "2026-01-01 01:30:00"}
+          # pair 2: one missing candle (below the threshold), complete up to now
+          - {pair_id: 2, candle_time_utc: "2026-01-01 02:15:00"}
+          - {pair_id: 2, candle_time_utc: "2026-01-01 02:45:00"}
+    expect:
+      rows:
+        - {pair_id: 1, gap_start_utc: "2026-01-01 00:15:00", gap_end_utc: "2026-01-01 01:30:00", missing_candles: 4, is_open: false}
+        - {pair_id: 1, gap_start_utc: "2026-01-01 01:30:00", gap_end_utc: "2026-01-01 03:00:00", missing_candles: 5, is_open: true}

@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -15,9 +16,29 @@ class Settings(BaseSettings):
     http_timeout_s: float = 30.0
     max_retries: int = 5
     quote_asset: str = "ZUSD"
+    # How many of the most traded pairs `crypto pairs rank` puts on the whitelist.
+    top_pairs: int = 50
+    # Bases that are not crypto: fiat and tokenised gold. USD stablecoins are detected from their price.
+    excluded_bases: set[str] = {"EUR", "GBP", "AUD", "CAD", "CHF", "JPY", "EURC", "EURQ", "EURR", "EUROP",
+                                "PAXG", "XAUT"}
     log_level: str = "INFO"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def postgres_env(database_url: str) -> dict[str, str]:
+    """The standard libpq variables (PGHOST, ...) for a SQLAlchemy URL - how dbt's profile connects."""
+    url = make_url(database_url)
+    env = {
+        "PGHOST": url.host or "localhost",
+        "PGPORT": str(url.port or 5432),
+        "PGUSER": url.username or "",
+        "PGPASSWORD": url.password or "",
+        "PGDATABASE": url.database or "",
+    }
+    if sslmode := url.query.get("sslmode"):
+        env["PGSSLMODE"] = sslmode
+    return env

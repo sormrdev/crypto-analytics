@@ -1,0 +1,27 @@
+table 'Invested amount'
+	lineageTag: 8c97a179-e3f7-49d2-936a-c685d2e9b335
+
+	/// Selected margin in USD (defaults to 100).
+	measure 'Invested amount Value' = SELECTEDVALUE('Invested amount'[Invested amount], 100)
+		formatString: \$#,0
+		lineageTag: 48c1bdc4-e6c5-4cbc-8635-2888cac1b706
+
+	column 'Invested amount'
+		formatString: 0
+		lineageTag: c8ae4062-bc9b-4fd6-984d-ab490a2ec6a6
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 0
+				}
+
+		annotation SummarizationSetBy = User
+
+	partition 'Invested amount' = calculated
+		mode: import
+		source = GENERATESERIES(20, 300, 1)
+
+	annotation PBI_Id = 9a205e1c0cee4cdaa135b2513de5d76c
+

@@ -43,8 +43,8 @@ flowchart LR
 ### Scheduled sync
 
 The project runs against a local database. `scripts/register_sync_task.ps1` registers a Windows scheduled task
-that runs `scripts/sync_local.ps1` every 4 hours (`ohlc sync`, then `dbt build`, logged to `logs/sync.log`);
-runs missed while the computer was off start when it is back. For a hosted database, `.github/workflows/sync.yml` is ready to
+that runs `scripts/sync_local.ps1` every Sunday (`ohlc sync`, then `dbt build`, logged to `logs/sync.log`), inside
+the 7.5 days the OHLC endpoint covers; a run missed while the computer was off starts when it is back. For a hosted database, `.github/workflows/sync.yml` is ready to
 run every 4 hours: migrations, `pairs sync`, `ohlc sync`, `dbt build`, and a dbt source-freshness check that fails
 the run (and emails you) when the newest candle is over 24 hours old. It is off by default; to turn it on, add the
 database URL as the `CRYPTO_DATABASE_URL` repository secret and set the repository variable `SYNC_ENABLED` to

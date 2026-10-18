@@ -49,8 +49,8 @@ predictable by session, which matters for sizing, stops and leverage. The direct
 
 - **Collection gaps:** all pairs have holes from 27 Jun to 19 Jul and from 16 Aug to 9 Oct 2026, found with `crypto gaps`.
   The findings use only gap-free windows (query 5 skips any entry without 24 hours of continuous data).
-- **Survivorship bias:** the report keeps pairs with at least $1M turnover in the *current* 365-day window,
-  so pairs that died earlier are missing.
+- **Survivorship bias:** the report keeps only the 50 pairs that were most traded in the 30 days to 18 Oct 2026
+  (and had at least $1M turnover in the 365-day window), so pairs that faded or died earlier are missing.
 - **Simulator assumptions:** isolated margin, 1% maintenance margin, no fees, funding or slippage. Prices are
   spot candles used as a proxy for futures.
 - **Session times:** London and New York opens use summer time (07:00 and 13:30 UTC).
@@ -59,7 +59,7 @@ predictable by session, which matters for sizing, stops and leverage. The direct
 
 ```mermaid
 flowchart LR
-    K1[Kraken /AssetPairs] --> P[pairs sync]
+    K1[Kraken /Ticker + daily OHLC<br/>30-day turnover] --> P[pairs rank → tracked_pairs.txt<br/>pairs sync]
     K2[Kraken /OHLC<br/>last 720 candles] --> O[ohlc sync]
     K3[Kraken /Trades<br/>full history] --> B[backfill<br/>trades → candles + VWAP]
     P & O & B --> DB[(PostgreSQL<br/>raw: pair · timeframe · ohlc_candle)]
@@ -72,8 +72,21 @@ flowchart LR
 
 `.github/workflows/sync.yml` runs every 4 hours: migrations, `pairs sync`, `ohlc sync`, `dbt build`, and a dbt
 source-freshness check that fails the run (and emails you) when the newest candle is over 24 hours old. It reads
-the database URL from the `CRYPTO_DATABASE_URL` repository secret and, optionally, the pairs to sync from the
-`SYNC_SYMBOLS` variable. `scripts/copy_to_cloud.py` seeds a hosted database with the top pairs by turnover.
+the database URL from the `CRYPTO_DATABASE_URL` repository secret and the pairs to track
+from `tracked_pairs.txt`. `scripts/copy_to_cloud.py` seeds a hosted database with the top pairs by turnover.
+
+### Which pairs are tracked
+
+Kraken lists 600+ USD pairs, most of them barely traded. The pipeline follows a fixed whitelist of the **50 most
+traded crypto pairs**, committed as [`tracked_pairs.txt`](tracked_pairs.txt) and stored in `pair.tracked`.
+`crypto pairs rank` builds it: one `/Ticker` call gives the 24-hour turnover of every pair, the 150 busiest become a
+shortlist, and their daily candles rank them by **30-day** USD turnover, since a single day is too noisy. Fiat and
+tokenised gold are excluded by name (`CRYPTO_EXCLUDED_BASES`); USD stablecoins are detected from their price
+(within 2% of $1 and less than 1% daily range), so new ones need no list update.
+
+The list is fixed on purpose. Re-ranking on every run would make pairs near the cut-off drop out and come back,
+leaving holes in their history each time. The scheduled `pairs sync` only applies the file; `ohlc sync` and the
+dbt `pairs` mart use tracked pairs only, and `crypto pairs prune` deletes the rest.
 
 ### dbt reporting layer
 
@@ -97,6 +110,9 @@ and warns when a gap is too large for it to fill.
 - **Resilient API client** – request throttling for Kraken's rate limits, retries with exponential backoff on
   HTTP 429/5xx and Kraken `EAPI:Rate limit` errors.
 - **Interrupt-safe backfill** – Ctrl+C flushes everything aggregated so far; the next run resumes.
+- **Backfill fetches only holes** – candles already stored are skipped (every 1000 trades cost an API call), so
+  re-running over a long window only downloads what is missing; `--overwrite` rebuilds everything. A progress
+  bar shows how far it got and the time left.
 - **Data-quality checks** – `crypto gaps` ranks every pair by missing data (or lists one pair's holes with
   the `backfill` command to fill them); dbt tests and freshness checks run on every scheduled load.
 - **Schema migrations** with Alembic, **unit tests** (pytest, mocked HTTP), **ruff**, **GitHub Actions CI**.
@@ -136,11 +152,14 @@ uv run crypto dbt build          # build and test the reporting layer
 ## Usage
 
 ```bash
-uv run crypto pairs sync                         # register USD pairs listed on Kraken
-uv run crypto ohlc sync                          # latest 15m candles for all pairs
+uv run crypto pairs rank --top 50 --days 30      # rank by 30-day turnover, rewrite tracked_pairs.txt
+uv run crypto pairs sync                         # apply tracked_pairs.txt to the database
+uv run crypto pairs prune                        # list untracked pairs; --yes deletes them and their candles
+uv run crypto ohlc sync                          # latest 15m candles for tracked pairs
 uv run crypto ohlc sync XBTUSD ETHUSD -t 1h      # selected pairs, other interval
 uv run crypto backfill AAVEUSD --since 2026-06-17   # full history from trades (Ctrl+C safe)
-uv run crypto backfill AAVEUSD                   # resume from the last stored candle
+uv run crypto backfill AAVEUSD                   # fill the first gap too large for ohlc sync, or resume
+uv run crypto backfill --since 2026-08-16 --until 2026-10-12   # one window for every tracked pair
 uv run crypto gaps                               # every pair ranked by missing candles
 uv run crypto gaps XBTUSD --since 2026-06-01     # one pair's holes (UTC) + the backfill command to fill them
 uv run crypto dbt build                          # rebuild and test the reporting tables
@@ -159,9 +178,9 @@ uv run crypto dbt build    # dbt unit tests + data tests
 ## Power BI report
 
 `powerbi/crypto_analysis.pbip` (Power BI Project – model in TMDL, report in PBIR, both plain text in Git).
-It imports the dbt marts in the `reporting` schema, which already apply the 365-day window, the 1M USD
-liquidity filter and UTC conversion, so the report itself stays thin: a star schema with three fact tables
-(candles, gaps, daily coverage) sharing the pair and calendar dimensions. The connection is set by two
+It imports the dbt marts in the `reporting` schema, which already apply the top-50 whitelist, the 365-day
+window, the 1M USD liquidity filter and UTC conversion, so the report itself stays thin: a star schema with three
+fact tables (candles, gaps, daily coverage) sharing the pair and calendar dimensions. The connection is set by two
 Power Query parameters, `DatabaseServer` (default `localhost:5432`) and `DatabaseName`
 (Transform data → Edit parameters).
 
@@ -178,7 +197,7 @@ Assumptions: isolated margin, 1% maintenance margin rate (`Maintenance Margin Ra
 
 | Table | Content |
 |---|---|
-| `pair` | Kraken pair altname (`XBTUSD`, `ETHUSD`, …) |
+| `pair` | Kraken pair altname (`XBTUSD`, `ETHUSD`, …) and whether it is on the tracked whitelist |
 | `timeframe` | Interval code and length in seconds (`15m` = 900) |
 | `ohlc_candle` | One candle per pair × timeframe × open time: OHLC, volume, VWAP. Check constraints guard OHLC consistency. |
 

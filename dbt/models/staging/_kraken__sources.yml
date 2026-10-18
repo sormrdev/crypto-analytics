@@ -10,6 +10,9 @@ sources:
             data_tests: [unique, not_null]
           - name: symbol
             data_tests: [unique, not_null]
+          - name: tracked
+            description: On the whitelist of most traded pairs, maintained by `crypto pairs sync`.
+            data_tests: [not_null]
 
       - name: timeframe
         description: Candle intervals, seeded by the baseline migration.

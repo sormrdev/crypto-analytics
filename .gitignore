@@ -29,3 +29,6 @@ dbt/.user.yml
 
 # Local database dumps
 backups/
+
+# Local sync logs
+logs/

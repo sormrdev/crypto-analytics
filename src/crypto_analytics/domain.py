@@ -61,3 +61,19 @@ class Trade:
     time: datetime
     price: Decimal
     volume: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PairActivity:
+    """A pair's last 24 hours on Kraken, as reported by the Ticker endpoint."""
+
+    symbol: str
+    turnover_usd: Decimal  # 24h volume x 24h VWAP
+    vwap: Decimal
+    low: Decimal
+    high: Decimal
+
+    @property
+    def is_usd_pegged(self) -> bool:
+        """Looks like a USD stablecoin: trades within 2% of $1 and moved less than 1% in a day."""
+        return abs(self.vwap - 1) < Decimal("0.02") and self.high - self.low < self.vwap * Decimal("0.01")

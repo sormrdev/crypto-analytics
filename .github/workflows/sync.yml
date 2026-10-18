@@ -18,18 +18,16 @@ jobs:
     timeout-minutes: 45
     env:
       CRYPTO_DATABASE_URL: ${{ secrets.CRYPTO_DATABASE_URL }}
-      # Optional repository variable: space-separated pairs to sync (empty = every pair in the database).
-      SYNC_SYMBOLS: ${{ vars.SYNC_SYMBOLS }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - name: Migrate schema
         run: uv run alembic upgrade head
-      - name: Register new pairs
+      - name: Apply the pair whitelist (tracked_pairs.txt)
         run: uv run crypto pairs sync
-      - name: Fetch latest candles
-        run: uv run crypto ohlc sync $SYNC_SYMBOLS
+      - name: Fetch latest candles of tracked pairs
+        run: uv run crypto ohlc sync
       - name: Build and test reporting tables
         run: uv run crypto dbt build
       - name: Check data freshness
